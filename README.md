@@ -7,7 +7,7 @@ Community-driven collection of Claude Code plugins — skills, agents, and tools
 ### 1. Add the marketplace
 
 ```
-/plugin marketplace add jazithedev/jazithedev-ai-marketplace
+/plugin marketplace add jazithedev/ai-marketplace
 ```
 
 ### 2. Browse available plugins
