@@ -1,6 +1,6 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "ai-marketplace",
+  "name": "Jazi's AI Marketplace",
   "owner": {
     "name": "Krzysztof Trzos",
     "email": "k.trzos@jazi.pl"
