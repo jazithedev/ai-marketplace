@@ -8,6 +8,6 @@
   },
   "license": "MIT",
   "keywords": ["git", "commit", "conventional-commits", "workflow", "productivity"],
-  "repository": "https://github.com/jazithedev/ai-marketplace",
-  "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/smart-commit"
+  "repository": "https://github.com/jazithedev/jazithedev-ai-marketplace",
+  "homepage": "https://github.com/jazithedev/jazithedev-ai-marketplace/tree/main/plugins/smart-commit"
 }
