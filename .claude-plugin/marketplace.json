@@ -21,7 +21,7 @@
       "category": "productivity",
       "keywords": ["git", "commit", "conventional-commits", "workflow"],
       "license": "MIT",
-      "homepage": "https://github.com/jazithedev/jazithedev-ai-marketplace/tree/main/plugins/smart-commit"
+      "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/smart-commit"
     }
   ]
 }
