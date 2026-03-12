@@ -1,0 +1,27 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "ai-marketplace",
+  "owner": {
+    "name": "Krzysztof Trzos",
+    "email": "k.trzos@jazi.pl"
+  },
+  "metadata": {
+    "description": "Community-driven collection of Claude Code skills, agents, and plugins for software development workflows",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "smart-commit",
+      "description": "Intelligent git commit skill with Conventional Commits, automatic change decomposition into logical groups, and interactive approval workflow",
+      "version": "1.0.0",
+      "author": {
+        "name": "Krzysztof Trzos"
+      },
+      "source": "./plugins/smart-commit",
+      "category": "productivity",
+      "keywords": ["git", "commit", "conventional-commits", "workflow"],
+      "license": "MIT",
+      "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/smart-commit"
+    }
+  ]
+}

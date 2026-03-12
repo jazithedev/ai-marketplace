@@ -1,0 +1,100 @@
+name: Validate Marketplace
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate-json:
+    name: Validate JSON syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate marketplace.json
+        run: python3 -c "import json; json.load(open('.claude-plugin/marketplace.json'))"
+
+      - name: Validate all plugin.json files
+        run: |
+          find plugins -name "plugin.json" -print0 | while IFS= read -r -d '' file; do
+            echo "Validating $file"
+            python3 -c "import json; json.load(open('$file'))"
+          done
+
+  validate-structure:
+    name: Validate plugin structure
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check marketplace required fields
+        run: |
+          python3 -c "
+          import json, sys
+          m = json.load(open('.claude-plugin/marketplace.json'))
+          errors = []
+          if 'name' not in m: errors.append('Missing required field: name')
+          if 'owner' not in m: errors.append('Missing required field: owner')
+          elif 'name' not in m['owner']: errors.append('Missing required field: owner.name')
+          if 'plugins' not in m: errors.append('Missing required field: plugins')
+          for i, p in enumerate(m.get('plugins', [])):
+            if 'name' not in p: errors.append(f'plugins[{i}]: missing name')
+            if 'source' not in p: errors.append(f'plugins[{i}]: missing source')
+          if errors:
+            print('\n'.join(errors))
+            sys.exit(1)
+          print('Marketplace schema OK')
+          "
+
+      - name: Check plugin directories exist
+        run: |
+          python3 -c "
+          import json, os, sys
+          m = json.load(open('.claude-plugin/marketplace.json'))
+          errors = []
+          for p in m.get('plugins', []):
+            source = p.get('source', '')
+            if isinstance(source, str) and source.startswith('./'):
+              if not os.path.isdir(source):
+                errors.append(f\"Plugin '{p['name']}': source directory '{source}' not found\")
+              elif not os.path.isfile(os.path.join(source, '.claude-plugin', 'plugin.json')):
+                errors.append(f\"Plugin '{p['name']}': missing .claude-plugin/plugin.json\")
+          if errors:
+            print('\n'.join(errors))
+            sys.exit(1)
+          print('All plugin directories OK')
+          "
+
+      - name: Check each plugin has at least one skill or command
+        run: |
+          python3 -c "
+          import json, os, sys, glob
+          m = json.load(open('.claude-plugin/marketplace.json'))
+          errors = []
+          for p in m.get('plugins', []):
+            source = p.get('source', '')
+            if isinstance(source, str) and source.startswith('./') and os.path.isdir(source):
+              skills = glob.glob(os.path.join(source, 'skills', '*', 'SKILL.md'))
+              commands = glob.glob(os.path.join(source, 'commands', '*.md'))
+              if not skills and not commands:
+                errors.append(f\"Plugin '{p['name']}': no skills or commands found\")
+          if errors:
+            print('\n'.join(errors))
+            sys.exit(1)
+          print('All plugins have skills/commands OK')
+          "
+
+      - name: Check no duplicate plugin names
+        run: |
+          python3 -c "
+          import json, sys
+          m = json.load(open('.claude-plugin/marketplace.json'))
+          names = [p['name'] for p in m.get('plugins', []) if 'name' in p]
+          dupes = [n for n in names if names.count(n) > 1]
+          if dupes:
+            print(f'Duplicate plugin names: {set(dupes)}')
+            sys.exit(1)
+          print('No duplicate names OK')
+          "
