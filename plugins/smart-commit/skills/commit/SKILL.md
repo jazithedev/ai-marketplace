@@ -17,9 +17,9 @@ If a previous plan with remaining groups exists:
 1. **Verify files still have uncommitted changes** — run `git diff --name-only` and `git diff --cached --name-only` to get the current set of modified files.
 2. **Compare against the remaining groups' file lists** — if all files from the remaining groups still show uncommitted changes, skip full re-analysis and present those groups directly (jump to the presentation step of the appropriate path).
 3. **Fall back to full re-analysis** if:
-   - Any files from the remaining groups no longer have changes (e.g., reverted externally)
-   - New files with changes appeared that weren't in the original plan
-   - The user explicitly asks for a fresh analysis
+    - Any files from the remaining groups no longer have changes (e.g., reverted externally)
+    - New files with changes appeared that weren't in the original plan
+    - The user explicitly asks for a fresh analysis
 
 This avoids redundant re-analysis when the user commits groups incrementally across multiple `/commit` invocations in the same conversation.
 
@@ -104,7 +104,7 @@ Combine all changes (staged + unstaged) into a single pool. Apply the same decom
 
 ### C.4. Present the plan
 
-Same format as Path B (B.4), including the option to commit only specific groups with automatic re-staging of remaining groups' files. Additionally, annotate each group to indicate which files are currently staged vs unstaged, so the user understands the staging area will be adjusted.
+Same format as Path B (B.4), including file count and line stats per group, the option to commit only specific groups with automatic re-staging of remaining groups' files. Additionally, annotate each group to indicate which files are currently staged vs unstaged, so the user understands the staging area will be adjusted.
 
 ### C.5. Execute commits sequentially
 
@@ -158,7 +158,7 @@ Same as Path A — parse branch name for the first numeric segment.
 
 Read the diffs and determine whether all unstaged tracked changes serve a single logical purpose or multiple distinct purposes.
 
-#### Two-pass decomposition
+#### Three-pass decomposition
 
 **Pass 1 — By purpose:** Separate changes that serve different logical goals into distinct groups. A bug fix and a new feature are always separate commits. Unrelated style/cleanup changes get their own group when they are not trivially small relative to the main change.
 
@@ -166,11 +166,24 @@ Watch for **"introduce vs. consume"** — a common pattern where changes look li
 
 **Pass 2 — By size:** Evaluate each group's diff size.
 
-| Size              | Action                                                                 |
-|-------------------|------------------------------------------------------------------------|
-| ≤200 lines        | Target. Keep as one commit.                                            |
-| 201–400 lines     | Split if a clean boundary exists; justify keeping together if not.     |
-| >400 lines        | Must split — see exception below for uniform changes.                 |
+| Size          | Action                                                             |
+|---------------|--------------------------------------------------------------------|
+| ≤200 lines    | Target. Keep as one commit.                                        |
+| 201–400 lines | Split if a clean boundary exists; justify keeping together if not. |
+| >400 lines    | Must split — see exception below for uniform changes.              |
+
+**Soft file-count limit:** Aim for ~10 files per commit. When a group exceeds this, look for a clean split boundary. Waive the limit when files are tightly coupled and splitting would break CI (e.g., a required parameter change that touches the command, its handler, and all callers).
+
+**Pass 3 — CI safety:** After grouping, validate that each commit can pass CI independently (static analysis, type checks, tests). When a split would break CI, resolve it using one of these strategies (in order of preference):
+
+1. **Introduce without consuming.** The preferred approach. In commit N, add the new class/method/parameter AND update all call sites to pass it — but don't use it internally yet. In commit N+1, implement the logic that consumes it. This preserves the clean split while keeping CI green. Examples:
+    - New parameter: commit N adds the parameter to the constructor and all callers pass a value. Commit N+1 wires the parameter into the method's internal logic.
+    - New class/service: commit N creates the class and registers it in DI. Commit N+1 injects and uses it.
+    - New method: commit N adds the method. Commit N+1 calls it from the higher layer.
+
+2. **Merge groups.** When "introduce without consuming" isn't practical (e.g., the split boundary doesn't allow it, or the groups are small enough that merging stays within file/line limits), merge the dependent groups into one commit.
+
+The goal is: every commit in the sequence must pass CI on its own. Never leave a commit where a required parameter has no callers, a type reference is unresolved, or a test fails.
 
 #### Exception: mechanically uniform changes
 
@@ -237,7 +250,7 @@ When this happens: temporarily revert the unrelated changes in the file (keeping
 - Detect "introduce vs. consume" patterns — when a changeset enriches a domain contract (new property, method, or capability on an interface + all implementations) and a higher layer consumes it, split into a domain-enrichment group and a consumer group
 - Then check size — split large groups along layer boundaries following dependency direction
 - Separate unrelated style/cleanup changes from functional changes, even within the same file
-- Group test files with the production code layer they test
+- **Tests must always ship with the production code they cover** — never commit tests as a separate group. Group test files with the production code layer they test
 - Separate config/infrastructure changes (Docker, CI, devops) from application code when independently meaningful
 - Group dependency/lock file changes with the commit that caused them
 - Separate documentation only when it doesn't document a code change in the same set
@@ -250,12 +263,12 @@ Unrelated improvements, style fixes, or minor cleanups must not be bundled into 
 
 **Single group:** Present the commit message inside a box-drawing frame (see [Commit Message Presentation](#commit-message-presentation)) along with the file list. Ask to proceed.
 
-**Multiple groups:** Present a numbered plan where each group's commit message line is shown inside its own box-drawing frame:
+**Multiple groups:** Present a numbered plan where each group shows file count, line stats (from `git diff --stat` for the group's files), and commit message inside a box-drawing frame:
 
 ```
 I've identified N logical groups in your changes:
 
-Group 1:
+Group 1 (2 files, +142 lines):
 ╔════════════════════════════════════════════════════════╗
 ║  feature(map): add polygon validation service          ║
 ╚════════════════════════════════════════════════════════╝
@@ -263,14 +276,14 @@ Group 1:
     - src/Module/Map/Domain/Service/PolygonValidator.php
     - tests/Module/Map/Domain/Service/PolygonValidatorTest.php
 
-Group 2:
+Group 2 (1 file, +12 -8 lines):
 ╔════════════════════════════════════════════════════════╗
 ║  fix(websocket): correct heartbeat interval            ║
 ╚════════════════════════════════════════════════════════╝
   Files:
     - src/Module/Websocket/Infrastructure/Server.php
 
-Group 3:
+Group 3 (2 files, +3 -1 lines):
 ╔════════════════════════════════════════════════════════╗
 ║  chore(docker): update PHP base image tag              ║
 ╚════════════════════════════════════════════════════════╝
@@ -283,6 +296,8 @@ change a commit message, commit only specific groups (remaining
 groups' files will be re-staged automatically), or drop a group
 (leaves files uncommitted).
 ```
+
+**Stats format:** Use `git diff --stat -- <files>` for each group to get line counts. Show as `(N files, +A -D lines)` for new+deleted, or `(N files, +A ~M -D lines)` when modifications are present. For new-only files, `(N files, +A lines)` suffices.
 
 If any group requires stubs, detail exactly what stubs will be inserted and where.
 

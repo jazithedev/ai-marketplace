@@ -7,13 +7,13 @@
   },
   "metadata": {
     "description": "Community-driven collection of Claude Code skills, agents, and plugins for software development workflows",
-    "version": "1.0.0"
+    "version": "1.0.1"
   },
   "plugins": [
     {
       "name": "smart-commit",
       "description": "Intelligent git commit skill with Conventional Commits, automatic change decomposition into logical groups, and interactive approval workflow",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "author": {
         "name": "Krzysztof Trzos"
       },
