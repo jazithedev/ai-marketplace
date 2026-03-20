@@ -35,7 +35,7 @@ Run `git diff --cached --stat` and `git diff --stat` to check for both staged an
 
 ## Path A: Staged Changes Exist
 
-The user has intentionally staged specific files. Respect that intent and commit only what's staged.
+The user has intentionally staged specific files. Respect that intent and commit only what's staged — but large changesets still need decomposition.
 
 ### A.1. Gather context
 
@@ -44,6 +44,18 @@ Run these commands in parallel:
 - `git diff --cached` — the staged changes
 - `git diff --cached --stat` — summary of files changed
 - `git branch --show-current` — current branch name (for issue number)
+
+### A.1a. Check if decomposition is needed
+
+After gathering context, check the size of the staged changeset. If the staged changes exceed **200 total diff lines** or touch **more than 10 files**, the changeset likely serves multiple purposes and should be decomposed into smaller commits — even though the user staged everything together.
+
+When this threshold is exceeded:
+1. Apply the full three-pass decomposition logic from B.3 to the staged diff.
+2. Present the plan as in B.4, noting that all files are currently staged and the staging area will be adjusted per group.
+3. Execute commits sequentially as in C.5 (reset staging area before each group).
+
+When the changeset is small enough for a single commit, proceed to A.2.
+
 ### A.2. Extract the issue number
 
 The branch name contains the issue/ticket number. Extract it:
@@ -164,6 +176,11 @@ Read the diffs and determine whether all unstaged tracked changes serve a single
 
 Watch for **"introduce vs. consume"** — a common pattern where changes look like one purpose but are actually two sequential steps. If the changeset both (a) adds a new capability to a contract/interface and its implementations, and (b) uses that capability in a higher layer, those are distinct purposes: "enrich the domain model" and "use the enriched model." The enrichment is independently reviewable and mergeable; the consumer depends on it, not vice versa. Treat them as separate groups even when they serve the same feature.
 
+This pattern appears in multiple forms — catch all of them during Pass 1, not as an afterthought during size checks:
+- **Contract enrichment + consumer**: new property/method on interface + all implementations → one group; higher-layer code that uses it → separate group
+- **New capability + trigger**: a new command/service that performs an action → one group; an event subscriber/controller/worker that dispatches it → separate group
+- **Infrastructure + wiring**: a new adapter/resolver/gateway → one group; the DI config + event listener that connects it → can be separate if the wiring is substantial
+
 **Pass 2 — By size:** Evaluate each group's diff size.
 
 | Size          | Action                                                             |
@@ -171,6 +188,8 @@ Watch for **"introduce vs. consume"** — a common pattern where changes look li
 | ≤200 lines    | Target. Keep as one commit.                                        |
 | 201–400 lines | Split if a clean boundary exists; justify keeping together if not. |
 | >400 lines    | Must split — see exception below for uniform changes.              |
+
+**The >400-line rule is strict.** Do not present a group at or above 400 lines and wait for the user to request a split — apply the split proactively during analysis. If a group lands in the 380–400 range after Pass 1, look for a clean split boundary and prefer splitting. The goal is that every group presented to the user is already within limits.
 
 **Soft file-count limit:** Aim for ~10 files per commit. When a group exceeds this, look for a clean split boundary. Waive the limit when files are tightly coupled and splitting would break CI (e.g., a required parameter change that touches the command, its handler, and all callers).
 
@@ -393,7 +412,7 @@ When presenting a proposed commit message for user approval, **always** wrap it 
 ║  markers due to incorrect z-index assignment     ║
 ║  during layer initialization.                    ║
 ║                                                  ║
-║  Refs: #AM-342                                    ║
+║  Refs: #AM-342                                   ║
 ╚══════════════════════════════════════════════════╝
 ```
 
