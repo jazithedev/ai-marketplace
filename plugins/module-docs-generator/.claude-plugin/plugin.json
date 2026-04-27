@@ -1,7 +1,7 @@
 {
   "name": "module-docs-generator",
   "description": "Generate AGENTS.md, CONTRACTS.md, and INTEGRATIONS.md documentation for a module in a PHP modular monolith — domain, strategic and tactical design, published contracts, and consumed integrations",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": {
     "name": "Krzysztof Trzos",
     "email": "k.trzos@jazi.pl"
