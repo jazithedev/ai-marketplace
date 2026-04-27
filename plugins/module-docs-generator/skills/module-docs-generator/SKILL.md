@@ -61,10 +61,19 @@ assumes.
 
 **Part-responsibility model.** Parts 1–3 describe the code as it is; they are safe to regenerate
 on every run and any human edits to them will be overwritten. Part 4 is the team's highlighted
-disciplines — a human-maintained catalogue. The skill **must not silently overwrite Part 4**;
-on update runs it preserves the existing Part 4 verbatim and offers any newly detected
-candidates as review suggestions. On brand-new files Part 4 is emitted with a banner signalling
-that entries are candidates for human curation.
+disciplines — a human-maintained catalogue. The skill **must not silently overwrite Part 4**.
+
+- **Update mode** preserves the existing Part 4 verbatim and offers any newly detected candidates
+  as review suggestions.
+- **Regenerate-from-scratch mode** re-prompts the user about Part 4 specifically: if they decline
+  Part 4 replacement, the existing Part 4 is preserved verbatim (same as update mode) and
+  Subagent 6's output is presented separately as candidate additions; if they opt in, Subagent 6's
+  output replaces Part 4 with the engineer-curation banner.
+- **Brand-new files** emit Part 4 with the engineer-curation banner signalling that entries are
+  candidates for human curation.
+
+In every preserved-Part-4 case the candidate output is shown to the user after the file is
+written as "candidate additions for your review" — never merged silently.
 
 ## Content Principles
 
@@ -116,46 +125,27 @@ Each per-subagent reference file below is a **paste-ready prompt**: read the fil
 ### Step 2: Merge, Curate, and Rewrite
 
 This is an **active editing step**, not passive concatenation. Collect results from all six
-subagents, then:
+subagents and:
 
-1. **Scrub AGENTS.md content (from Subagents 1–3, 6) for any code references** that slipped through.
-   Scan for `::`, `->`, `.php`, `\\`, `$`, and any PascalCase words that look like class or
-   message names. Rewrite those sentences in business language. (Message class names belong in
-   the contract files, not here.) **Two narrow exceptions apply** — the Aggregates row labels
-   and the Value Objects list in Part 3 legitimately contain class names. Every other
-   PascalCase hit is a defect.
-2. **Deduplicate against root AGENTS.md**: Remove any rule that merely restates a project-wide
-   convention.
-3. **Remove generic DDD truisms**: If a statement would be true for ANY hexagonal-architecture
-   module, cut it.
-4. **Consolidate verbosity**: If a subagent produced overly detailed explanations, tighten to
-   concise statements. Prefer a crisp numbered rule over a paragraph.
-5. **Verify actor consistency**: Actors in the Capabilities section must exactly match the
-   Actors table.
-6. **Enforce the Part 3 / Part 4 boundary.** Part 3 is **structural** (tables + lists); Part 4
-   is **engineer-curated numbered rules**. If a Subagent-3 output contains numbered prose rules
-   (a "Domain Model", "Module Boundaries", "Layer Separation", or "Testing" subsection with
-   numbered bullets), that content belongs to Part 4 — route the rules to the appropriate Part 4
-   subsection before assembling. If a Subagent-6 output contains an aggregate / VO catalogue or
-   a reactive-policy table, that content belongs to Part 3 — route it there. Typical confusions:
-   "Aggregate Conventions" rules (state-via-methods, invalid-transition exceptions, events on
-   aggregate) are Part 4; the aggregate itself (class name + behaviours) is Part 3.
-7. **Part 4 preservation.** If the module already had an `AGENTS.md` and the user chose update
-   mode (or chose regenerate-from-scratch but declined to replace Part 4 when re-prompted),
-   substitute Subagent 6's output with the existing Part 4 content verbatim. Subagent 6's
-   output is then presented to the user as "candidate additions for your review" alongside the
-   written file — never merged silently.
-8. **Check cross-references.** Before finalising `AGENTS.md` Part 2, confirm the Bounded
-   Context Boundaries table's `Details` column points into anchors that actually exist in the
-   assembled `INTEGRATIONS.md`. Anchor slugs use lowercase-hyphenated service names.
-9. **Check contract-file coverage.** Every upstream in the Bounded Context Boundaries table
-   must have a section in `INTEGRATIONS.md`. Every query and integration event under
-   `Application/` must have an entry in `CONTRACTS.md` (commands are this module's own
-   internal orchestration and are deliberately out of scope for the published contract).
-   Discrepancies indicate a subagent missed something — re-run or fill in manually.
-10. **Scrub contract files for implementation names.** Search the assembled `CONTRACTS.md` and
-    `INTEGRATIONS.md` for handler / repository / service / gateway / client class names,
-    namespaces, and PHP syntax tokens. Rewrite or remove. Message class names MUST remain.
+1. **Route misclassified content across the Part 3 / Part 4 boundary.** Part 3 is **structural**
+   (tables + lists of aggregates, VOs, reactive policies); Part 4 is **engineer-curated numbered
+   rules**. If a Subagent-3 output contains numbered prose rules (a "Domain Model", "Module
+   Boundaries", "Layer Separation", or "Testing" subsection with numbered bullets), that content
+   belongs to Part 4 — route to the appropriate subsection before assembling. If a Subagent-6
+   output contains an aggregate / VO catalogue or a reactive-policy table, route it back to
+   Part 3. Typical confusions: "Aggregate Conventions" rules (state-via-methods, invalid-
+   transition exceptions, events on aggregate) are Part 4; the aggregate itself (class name +
+   behaviours) is Part 3.
+2. **Apply the Part 4 preservation rule** documented in §AGENTS.md structure (Part-responsibility
+   model). In update mode, substitute Subagent 6's output with the existing Part 4 content
+   verbatim, and present Subagent 6's output to the user separately as "candidate additions for
+   your review" — never merged silently.
+
+Then run every check in [`references/quality-checklist.md`](references/quality-checklist.md)
+against the assembled output. Defects surfaced by the checklist are fixed in this same pass —
+the checklist is the verification spec, not a separate later step. The classification rules used
+during routing live in [`references/content-principles.md`](references/content-principles.md)
+(§Business documentation, §Actors vs Reactive Policies).
 
 Assemble `AGENTS.md` in this order:
 
@@ -176,11 +166,9 @@ Assemble `AGENTS.md` in this order:
 <from Subagent 1 — 2-3 sentences>
 
 ### Core Business Processes
-<from Subagent 1 — 3-5 processes. Each process entry has three elements, in this order:
-bolded name, text-based visualisation (ASCII arrows/boxes matched to process type —
-lifecycle / decision chain / prerequisite pipeline / scheduled sweep / counter window),
-and 2-3 key characteristic bullets. A process with no visualisation is a defect; do not
-ship the file until every process has one.>
+<from Subagent 1 — 3-5 processes; each process has bolded name + text-based visualisation +
+2-3 key-characteristic bullets (see subagent-1 for the visualisation menu and the no-diagram-
+is-a-defect rule).>
 
 ### Business Rules & Constraints
 <from Subagent 1 — table format, 5-10 business rules with concrete values>
@@ -201,10 +189,8 @@ Details column links into `INTEGRATIONS.md#<anchor>`.>
 <from Subagent 2 — table format>
 
 ### Actors
-<from Subagent 2 — table only, no surrounding prose or footnotes.
-The heading, the table, then blank line. Do not emit a "Note:" block pointing to Part 3
-or explaining why subscribers are excluded — that exclusion is a design decision, not
-a doc artefact.>
+<from Subagent 2 — table only (no surrounding prose, no footnotes pointing to Part 3 — the
+exclusion of subscribers is a design decision, not a doc artefact).>
 
 ### Capabilities and Rules
 <from Subagent 2 — shared rules first, then per-actor capability tables.
@@ -215,10 +201,7 @@ Use #### for sub-headers (e.g., #### Shared HTTP Access Rules, #### Customer Use
 ## Part 3: Tactical Design Assessment
 
 ### Architectural Style
-<from Subagent 3 — one paragraph. If the module matches the project-wide standard hexagonal
-layout, emit a one-sentence pointer at root `AGENTS.md` §Project Structure plus "No
-module-specific deviations from the project-wide structure." Only emit a full 2-level
-directory tree when the module deviates. Always present.>
+<from Subagent 3 — one paragraph; always present (subagent-3 details the deviations-only rule).>
 
 ### Aggregates
 <from Subagent 3 — table with columns `Aggregate | Behaviors`. Aggregate column uses the class
@@ -234,23 +217,19 @@ parenthetical list of their implementations. Enum types may note their cases inl
 if the module has no VOs. This section is the second Tier A exception for class names.>
 
 ### Reactive Policies *(only if the module has in-process event subscribers beyond external-callback receivers)*
-<from Subagent 3 — table only, three columns: Policy | When | Then.
-No intro paragraph, no notes, no why-it-matters column. One row per policy.
-Consolidate semantically equivalent subscribers into a single row.
-Do NOT name event classes, subscriber classes, or dispatched commands — those live in INTEGRATIONS.md.
-Omit the entire section if the module has no such policies.>
+<from Subagent 3 — three-column table `Policy | When | Then`; subagent-3 covers consolidation
+and the no-class-names rule. Omit the entire section if the module has no such policies.>
 
 ## Part 4: Engineering Practices
 
-<If a new file OR the user opted into regenerating Part 4: emit this banner immediately after
-the `## Part 4: Engineering Practices` header:
+<When emitting a fresh Part 4 (per §AGENTS.md structure, Part-responsibility model): emit this
+banner immediately after the `## Part 4: Engineering Practices` header:
 
 *Part 4 is engineer-curated. The entries below are candidates detected from the codebase —
 review, edit, add, or remove as your team sees fit. Subsequent regenerations of this file
 preserve Part 4 verbatim unless you explicitly opt into replacing it.*
 
-If updating an existing file: do NOT regenerate Part 4 — preserve the existing Part 4 content
-verbatim (including any banner the engineer left in place or removed).>
+When preserving Part 4: carry it over verbatim, including any banner state the engineer left.>
 
 ### Aggregate Conventions *(omit if empty)*
 <from Subagent 6 — numbered rules about aggregate coding (state-via-methods, invalid-transition
@@ -324,20 +303,21 @@ Nested bullet lists are not used. Include `_None._` under any empty heading rath
 removing the heading.>
 ```
 
-### Step 3: Quality Review
+### Step 3: Final Gate Before Write
 
-Before writing files, read [`references/quality-checklist.md`](references/quality-checklist.md) and verify the assembled `AGENTS.md`, `CONTRACTS.md`, and `INTEGRATIONS.md` against every item. The checklist covers code-reference scrubbing, root `AGENTS.md` deduplication, actor / policy classification, contract-file coverage, consumed-shape cell rules, the dependency-summary sort order, dispatcher-grep verification, and the class-name manifest cross-check. Many items are blocking — do not write files until all defects are resolved or explicitly waived.
+The checklist run in Step 2 is the substantive review. This step is the explicit go/no-go: scan
+the assembled `AGENTS.md`, `CONTRACTS.md`, and `INTEGRATIONS.md` against
+[`references/quality-checklist.md`](references/quality-checklist.md) one final time and confirm
+every blocking item passes. Items 1, 11, 15, and 18 in the checklist are blocking — a single
+unresolved defect there means the files are not safe to write.
 
 ### Step 4: Write Files
 
 Write the following four files under `src/Modules/<ModuleName>/`:
 
-1. `AGENTS.md` — assembled Part 1 / Part 2 / Part 3 / Part 4 content. Part 4 is either the
-   existing file's Part 4 preserved verbatim (update mode, or regenerate mode where the user
-   declined Part 4 replacement) or Subagent 6's candidate output with the engineer-curation
-   banner (new file, or regenerate mode where the user opted in to Part 4 replacement). In the
-   preserved-Part-4 case, also present Subagent 6's candidate output to the user after the file
-   is written as "candidate additions for your review" — never merge silently.
+1. `AGENTS.md` — assembled Part 1 / Part 2 / Part 3 / Part 4 content. Apply the Part-
+   responsibility model documented in §AGENTS.md structure (above) to decide whether Part 4 is
+   preserved or replaced.
 2. `CLAUDE.md` — exactly:
    ```
    # All instructions and rules in AGENTS.md

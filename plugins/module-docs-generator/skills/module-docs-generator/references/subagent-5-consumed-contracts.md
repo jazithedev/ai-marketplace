@@ -110,8 +110,7 @@ Then one **card** per upstream under `## Internal module dependencies` and
 |---|---|---|---|---|---|
 | `<MessageClass>` | `field: type, field: type` | `TranslatorClass` | `{ field: type, ... } \| null` *(full consumed shape — see Consumed-shape cell rules)* | `-` *or* `<retry policy>` | `-` *or* `<TTL / scope>` |
 
-*(Name the Consumer per row — each message may translate a different slice of the upstream's surface.
-Writing a single shared sentence loses that precision. No separate `Returns` column: the upstream module publishes its full return in its own `CONTRACTS.md`, and the consumed-shape cell is the self-contained record of what this module actually reads from that return. Write `_None._` below the heading if we dispatch nothing to this module.)*
+*(No separate `Returns` column: the upstream module publishes its full return in its own `CONTRACTS.md`, and the consumed-shape cell is the self-contained record of what this module actually reads from that return. Write `_None._` below the heading if we dispatch nothing to this module. Per-Consumer expansion when the same Message has multiple consumers — see Verification step 5 below.)*
 
 #### Inbound communication *(internal modules — events published by this module that we subscribe to)*
 
@@ -119,7 +118,7 @@ Writing a single shared sentence loses that precision. No separate `Returns` col
 |---|---|---|---|
 | `<EventClass>` *(or `<EventName>` + payload class if the bus uses string keys)* | `SubscriberClass` | `{ field: type, ... }` *(full consumed shape — see Consumed-shape cell rules)* | <dedup / ordering notes — one short phrase; narrative goes in Business semantics> |
 
-*(Attach each event to the card of the module that **publishes** it — not the module that receives it. A reader opening the upstream's card should see every way that upstream reaches us. Write `_None._` below the heading if this module publishes nothing we subscribe to. Domain events that never leave this module (internal `Domain/Event/*` classes dispatched and consumed inside this module's own event listeners) are not integration contracts and do not appear anywhere in this file.)*
+*(Write `_None._` below the heading if this module publishes nothing we subscribe to. Attribution rule: see the Event subscribers source bullets above. Domain-event exclusion: see §Domain-event exclusion below.)*
 
 #### Outbound communication *(external services only)*
 
@@ -160,10 +159,9 @@ Writing a single shared sentence loses that precision. No separate `Returns` col
 
 **Consumed-shape cell rules — apply to every consumed-shape cell (internal Outbound-communication, internal Inbound-communication, Self-subscribed integration events, external Outbound-communication, external Inbound-communication):**
 
-The consumed-shape cell **IS a shape cell** (the Shape-cell rules above apply). Think of it as the slice of the upstream's return / response / callback payload that the named Consumer class actually reads, written as a raw type shape. It carries the consumed shape and nothing else:
+The consumed-shape cell **IS a shape cell** (the Shape-cell rules above apply). Think of it as the slice of the upstream's return / response / callback payload that the named Consumer class actually reads, written as a raw type shape. In addition to the Shape-cell rules:
 
 - **Self-contained.** A reader must understand which upstream data crosses into this module from this cell alone — without opening the upstream module's `CONTRACTS.md` (for internal) or the vendor's API documentation (for external). Write the shape out.
-- **Same notation as Fields / Request.** `{ field: type, ... }`, `parent: { child: type }`, `method(): type`, `Foo[]`, `?` on optional keys, string-literal unions, `T \| null`, `T \| false`.
 - **Include `\| null` / `\| false` iff the Consumer handles them.** Verify by reading the Consumer class's source for explicit null/false branches (`if ($x === null) return …`, `if ($x === false) …`, `?->`, null-coalescing). If the class does not branch on null/false, do not add the union member — doing so invents handling that isn't there.
 - **Forms (examples, not an exhaustive list):**
   - `{ f1: t1, f2: t2 }` — several fields / methods are read; list exactly those.
@@ -174,7 +172,6 @@ The consumed-shape cell **IS a shape cell** (the Shape-cell rules above apply). 
   - Target-type wrappers (`LocationId { locationId: int }`, `UtcTimestamp { reportRun.completedAt: DateTimeInterface }`, `CustomerId { customerId: int }`, `AvailabilityState { … }`, `Insight { … }`, `SeoBrainTaskStatus { … }`, any `PascalCaseName { … }` form). The domain type the Consumer *produces* is visible in the Consumer class's own return type and belongs in **Business semantics** if it matters; it does not belong in this cell.
   - Reduction expressions (`value > 0`, `count > 0`, etc.). If the upstream returns `{ value: int }` and the Consumer reduces it to a bool via `value > 0`, the cell still names `{ value: int }` — the reduction lives in the Consumer's code and (if it carries business meaning) in the **Business semantics** bullets.
   - Arrow notation (`→`, `=>`), prose, trailing clauses, or any `identity` shorthand. The old `identity` keyword is retired — always write the shape out so the cell stays self-contained and consistent across internal and external tables (neither carries an adjacent upstream-contract column).
-- **Unused fields are implicit.** Anything not named in the cell is not read. Do not annotate omissions ("we ignore …") — silence is the signal. If most of a large upstream type is unused, use `...` elision (e.g. `{ ..., is_sysadmin(): bool }`) — same convention as the other shape cells.
 
 *(The Consumer is named per-row in every table — internal Outbound-communication, internal Inbound-communication, Self-subscribed integration events, external Outbound-communication, external Inbound-communication —
 so each boundary-crossing call records exactly what it translates. Do not add a standalone
