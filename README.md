@@ -27,6 +27,7 @@ Community-driven collection of Claude Code plugins — skills, agents, and tools
 | Plugin | Category | Description |
 |---|---|---|
 | [smart-commit](plugins/smart-commit) | Productivity | Intelligent git commits with Conventional Commits, automatic change decomposition, and interactive approval |
+| [module-docs-generator](plugins/module-docs-generator) | Documentation | Generate AGENTS.md, CONTRACTS.md, and INTEGRATIONS.md for a module in a PHP modular monolith |
 
 ## Contributing
 
