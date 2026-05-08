@@ -173,6 +173,8 @@ Diff to review:
 ```
 ## Code Review Results
 
+_Within **Required Changes**, **Suggestions**, and **Questions**, separate consecutive items with a blank line so the developer can scan findings one at a time before approving the post._
+
 ### PR Discipline
 {Phase 1 results}
 
