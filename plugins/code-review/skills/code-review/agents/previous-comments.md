@@ -1,5 +1,7 @@
 # Agent 4 — Previous Review Comments
 
+**Recommended model:** Haiku (structured parsing of GitHub API + GraphQL output; no judgement required).
+
 **PR mode only.** Skip this agent entirely in local mode.
 
 Check for previous review comments on the same PR and on recent PRs touching the same files.
@@ -22,11 +24,13 @@ gh api repos/{owner}/{repo}/pulls/<PR>/reviews --paginate
 
 ## Skill-self-detection (G8b)
 
-Among the reviews you fetch, some may have been authored by **this same skill in a previous run**. Detect them by checking whether the review body starts with this exact marker line:
+Among the reviews you fetch, some may have been authored by **this same skill in a previous run**. Detect them by **prefix-matching** the review body's first line against:
 
 ```
-_This code review was made automatically by Krzysztof Trzos Code Review AI Skill._
+_This code review was made automatically by Krzysztof Trzos Code Review AI Skill
 ```
+
+(The prefix is open-ended. v1.0.3 and earlier emit `… AI Skill._`. v1.0.4+ append ` at <SHA> (memory <MTIME>)._` for the Win 5 short-circuit. Use a prefix match, not an exact-line match.)
 
 For each skill-authored review, build two collections: `prior_findings.inline` (one entry per inline comment) and `prior_findings.general` (one entry per General Finding in the body).
 

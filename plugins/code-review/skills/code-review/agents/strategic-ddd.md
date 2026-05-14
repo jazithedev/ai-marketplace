@@ -4,9 +4,17 @@ You are reviewing code changes for strategic DDD compliance and module boundary 
 
 ## Setup
 
-1. Read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/ddd-review-checklist.md` for the specific strategic checklist items.
+1. Read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/ddd-review-checklist.md` for the specific strategic checklist items (small, ~6 KB).
 2. Read the project's CLAUDE.md/AGENTS.md files to understand module/bounded-context organization.
 3. Examine the project's directory structure to identify module boundaries.
+
+**Do NOT load `references/ddd-expert-knowledge-base.md` up front.** It is ~54 KB and inflates context for almost no payoff on most findings. When you need a specific concept (e.g., "Bounded Context", "Anti-Corruption Layer", "Customer-Supplier"), invoke a targeted grep:
+
+```bash
+grep -i -A 30 "<concept_keyword>" ${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/ddd-expert-knowledge-base.md
+```
+
+Read only the matched section. If nothing relevant, proceed without it.
 
 ## What to Check
 

@@ -117,12 +117,30 @@ Step 4 is **four** parallel collection passes:
 
 **4b. Reviewer auto-memory (G5).** Read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/reviewer-memory-loading.md` and follow the load procedure to produce a `{reviewer_rules}` block. Encoding rule: replace `/` with `-` in the current working directory, prepend `~/.claude/projects/`, then read the resulting directory's `MEMORY.md` and every linked memory file. Filter to `type ∈ {feedback, user}`. Pass `{reviewer_rules}` to Agents 1, 5, 8 in Step 5. If `MEMORY.md` does not exist, the block is empty.
 
-**4c. Prior skill-authored reviews (G8b) — PR mode only.** Fetch existing reviews:
+**4c. Prior skill-authored reviews (G8b) — PR mode only.** Fetch existing reviews. The marker prefix is the stable identifier; the rest of the marker line may carry an optional SHA and memory mtime (added in v1.0.4):
 
 ```bash
 gh api repos/{owner}/{repo}/pulls/{pr}/reviews --paginate \
-  --jq '.[] | select(.body | startswith("_This code review was made automatically by Krzysztof Trzos Code Review AI Skill._")) | {id, body}'
+  --jq '.[] | select(.body | startswith("_This code review was made automatically by Krzysztof Trzos Code Review AI Skill")) | {id, body}'
 ```
+
+**Win 5 — short-circuit when nothing relevant has changed.** Before fetching inline comments, parse the most recent skill-authored review's marker line. If it carries a SHA marker and that SHA equals the current PR `headRefOid` AND the memory mtime equals the current `~/.claude/projects/<encoded_cwd>/memory/MEMORY.md` mtime (if it exists), then the diff and the reviewer-memory rules are both unchanged since the prior review.
+
+In that case:
+
+1. If there are **author replies** on prior threads since the review was authored, fall through to **Re-review mode (S6)** to triage those replies.
+2. Otherwise, print `No changes since last review at <SHA> — skipping Phases 1 and 2.` and exit.
+
+To skip the short-circuit and force a fresh run, the reviewer passes `--force` as the second argument: `/code-review:code-review <PR> --force`.
+
+Parsing the marker:
+```bash
+# Body's first line, e.g.: "_This code review was made automatically by Krzysztof Trzos Code Review AI Skill at 350074b6 (memory 1715701234)._"
+prior_sha=$(echo "$body" | head -1 | grep -oP 'at \K[a-f0-9]+')
+prior_mtime=$(echo "$body" | head -1 | grep -oP 'memory \K[0-9]+')
+```
+
+A marker line without `at <SHA>` was produced by v1.0.3 or earlier — treat as "no SHA captured" and run the full review normally.
 
 For each match, fetch its inline comments via `gh api repos/{owner}/{repo}/pulls/{pr}/comments --paginate` filtered to `pull_request_review_id == <review_id>`. Also fetch review-thread **resolved state** via GraphQL — REST doesn't expose `isResolved` on inline comments:
 
@@ -160,7 +178,9 @@ The PR's head SHA is in `gh pr view <PR> --json headRefOid` (already fetched in 
 
 ### Step 5: Launch all review agents in parallel
 
-Launch all agents in a **single message** so they run concurrently. Use Sonnet model for all. In **local mode**, skip Agent 4.
+Launch all agents in a **single message** so they run concurrently. **Model selection is per-agent** — see the table below. In **local mode**, skip Agent 4.
+
+Pattern-checking agents that produce structured output run on **Haiku** (cheaper, fast, sufficient for rule-matching). Judgement-heavy agents that reason about design, intent, and DDD concepts run on **Sonnet**.
 
 For each agent, the prompt follows this pattern:
 ```
@@ -174,16 +194,18 @@ Diff to review:
 
 **Launch these agents simultaneously:**
 
-| Agent | File | Needs | Notes |
-|-------|------|-------|-------|
-| Agent 1 | `agents/project-rules.md` | `{rules}` + `{reviewer_rules}` + diff | |
-| Agent 2 | `agents/bug-smell-scan.md` | diff | |
-| Agent 3 | `agents/historical-context.md` | diff + file list + `{base_ref}` + `{default_branch}` | Uses git log/blame; stacked-PR aware |
-| Agent 4 | `agents/previous-comments.md` | PR number, repo, `{prior_skill_findings}` | **PR mode only** |
-| Agent 5 | `agents/code-documentation.md` | diff + `{reviewer_rules}` | |
-| Agent 6 | `agents/tactical-ddd.md` | diff | Reads its own references |
-| Agent 7 | `agents/strategic-ddd.md` | diff + `{reviewer_rules}` | |
-| Agent 8 | `agents/jazi-craftsmanship.md` | diff + `{reviewer_rules}` | Reads its own references |
+| Agent | File | Model | Needs | Notes |
+|-------|------|-------|-------|-------|
+| Agent 1 | `agents/project-rules.md` | Sonnet | `{rules}` + `{reviewer_rules}` + diff | |
+| Agent 2 | `agents/bug-smell-scan.md` | Sonnet | diff | |
+| Agent 3 | `agents/historical-context.md` | **Haiku** | file list + `{base_ref}` + `{default_branch}` | Git log/blame summarisation, stacked-PR aware |
+| Agent 4 | `agents/previous-comments.md` | **Haiku** | PR number, repo, `{prior_skill_findings}` | **PR mode only** — structured parsing of API output |
+| Agent 5 | `agents/code-documentation.md` | Sonnet | diff + `{reviewer_rules}` | |
+| Agent 6 | `agents/tactical-ddd.md` | Sonnet | diff | Reads its own references (on-demand) |
+| Agent 7 | `agents/strategic-ddd.md` | Sonnet | diff + `{reviewer_rules}` | Reads its own references (on-demand) |
+| Agent 8 | `agents/jazi-craftsmanship.md` | Sonnet | diff + `{reviewer_rules}` | Reads its own references |
+
+Phase 1 agents (scope-analysis, size-analysis) also run on **Haiku** — see their respective files.
 
 The `{reviewer_rules}` block is the output of Step 4b. Always pass it to the agents listed above, even when empty — agents check for content and skip the section if blank.
 
@@ -223,13 +245,32 @@ Each finding leaving Step 6 has the shape described at the bottom of `references
 
 Before rendering the local preview, run two pre-passes:
 
-**Pre-pass 7A — Tone adjustment (S5).** Rewrite each finding `body` to:
+**Pre-pass 7A — Tone adjustment (S5, batched).** Rewrite each finding `body` to:
 - Drop redundant "Why:" lines when the description already explains the why.
 - Compress code blocks to ≤ 10 lines (replace longer segments with `// …`).
 - Strip greetings, padding, and softeners ("I think", "It seems", "perhaps").
 - Target ~30% reduction in body length.
 
-Use an inline Haiku-model sub-agent for the rewrite — one call per finding is fine. Keep the original `body` available as `body_raw` in case the reviewer asks for it during `edit`.
+**Win 4 — single batched call.** Invoke one Haiku sub-agent for the entire findings array (not one call per finding). The sub-agent receives a JSON array of `{id, body}` objects and must return a JSON array of `{id, body}` objects with rewritten bodies. The `id` field maps back to the candidate finding.
+
+Prompt template:
+
+```
+Rewrite each `body` to be ~30% shorter while preserving every concrete claim, file:line reference, and suggested-fix code block. Apply these rules:
+- Drop "Why:" lines when the description already explains the why.
+- Compress code blocks to ≤ 10 lines (replace longer segments with `// …`).
+- Strip greetings, padding, "I think", "It seems", "perhaps".
+- Keep markdown formatting, badges, and confidence/pattern footers verbatim.
+
+Input (JSON):
+{findings_array}
+
+Return: JSON array with the same `id` values and the rewritten `body` field. Output must be valid JSON, nothing else.
+```
+
+**Fallback.** If the batched response is not valid JSON or the `id` set doesn't match the input, fall back to per-finding Haiku calls. Don't block the preview on this — a malformed tone pass should never prevent posting.
+
+Keep each finding's original body as `body_raw` so the reviewer can request the un-toned version during `edit`.
 
 **Pre-pass 7B — Self-review check (S2).** If `gh api user --jq '.login'` equals the PR author's login AND the computed verdict is `APPROVE`, prepend this banner to the local preview:
 
@@ -338,8 +379,10 @@ The top-level review body contains **only** the metadata sections — never inli
 
 #### Top-level review body — exact template
 
+The first line of the body is a **marker** encoding the HEAD SHA and the reviewer-memory mtime. Both are used by Win 5 (Step 4c) to short-circuit re-runs when nothing relevant has changed.
+
 ```markdown
-_This code review was made automatically by Krzysztof Trzos Code Review AI Skill._
+_This code review was made automatically by Krzysztof Trzos Code Review AI Skill at <SHORT_SHA> (memory <UNIX_MTIME>)._
 
 ## Summary
 | Severity | Count | Pattern                                                |

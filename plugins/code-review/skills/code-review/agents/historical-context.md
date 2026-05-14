@@ -1,5 +1,7 @@
 # Agent 3 — Historical Context
 
+**Recommended model:** Haiku (git log summarisation; pattern detection without DDD-level judgement).
+
 For files changed in the diff, use `git log` and `git blame` to understand the change history.
 
 ## What to Investigate

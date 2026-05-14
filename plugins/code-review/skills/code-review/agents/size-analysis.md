@@ -1,5 +1,7 @@
 # Agent B — Size Analysis
 
+**Recommended model:** Haiku (pure stat check, no reasoning required).
+
 You are analyzing a pull request for size discipline.
 
 ## Input

@@ -107,11 +107,13 @@ The orchestrator can detect its own past reviews on the PR and avoid re-emitting
 
 ### Detection
 
-A review is "skill-authored" when its body **starts** with the marker line:
+A review is "skill-authored" when its body **starts** with the marker prefix:
 
 ```
-_This code review was made automatically by Krzysztof Trzos Code Review AI Skill._
+_This code review was made automatically by Krzysztof Trzos Code Review AI Skill
 ```
+
+(Note: the prefix is open-ended. v1.0.3 and earlier emitted exactly `… AI Skill._`. v1.0.4+ appends ` at <SHA> (memory <MTIME>)._`. Detection should be a prefix match on the open string above.)
 
 (The marker is stable across all versions of the skill — see SKILL.md Step 8's top-level body template.)
 

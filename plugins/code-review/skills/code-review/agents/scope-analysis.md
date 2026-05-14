@@ -1,5 +1,7 @@
 # Agent A — Scope Analysis
 
+**Recommended model:** Haiku (rule-matching only, no nuanced judgement required).
+
 You are analyzing a pull request for scope discipline. Your job is to determine if this PR has a SINGLE reason for change.
 
 Read the reference file at `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/pr-discipline.md` for the full ruleset.

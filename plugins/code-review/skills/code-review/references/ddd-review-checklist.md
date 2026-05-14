@@ -95,3 +95,22 @@ The default for most items below is MUST, unless the reviewer determines the con
 - Direct class instantiation across module boundaries (should use commands/queries/events)
 - Shared database tables between modules without explicit ownership
 - Circular dependencies between modules
+
+---
+
+## When you need deeper context
+
+This checklist is intentionally short. For most findings, the items above are enough to ground a classification.
+
+If you need a canonical definition of a concept (Aggregate Root, Domain Service, Invariant, Anti-Corruption Layer, Customer-Supplier, etc.) before emitting a finding, do **NOT** read the full `ddd-expert-knowledge-base.md` (54 KB). Instead run a targeted grep and read only the matched section:
+
+```bash
+grep -i -A 30 "<concept_keyword>" ${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/ddd-expert-knowledge-base.md
+```
+
+Examples:
+- `grep -i -A 30 "aggregate root"` — Evans's definition + invariant rules.
+- `grep -i -A 30 "anti-corruption layer"` — when to introduce one, what it wraps.
+- `grep -i -A 30 "customer-supplier"` — Context Mapping pattern.
+
+If the grep returns nothing useful, proceed with what the checklist provides. The knowledge base is a reference resource, not a default load.
