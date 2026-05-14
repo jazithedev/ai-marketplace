@@ -20,7 +20,7 @@ gh api repos/{owner}/{repo}/pulls/<PR>/reviews --paginate
 - Conflicting feedback from different reviewers
 - **Prior skill-authored reviews** — see "Skill-self-detection" below
 
-## Skill-self-detection (G8)
+## Skill-self-detection (G8b)
 
 Among the reviews you fetch, some may have been authored by **this same skill in a previous run**. Detect them by checking whether the review body starts with this exact marker line:
 
@@ -28,19 +28,61 @@ Among the reviews you fetch, some may have been authored by **this same skill in
 _This code review was made automatically by Krzysztof Trzos Code Review AI Skill._
 ```
 
-For each skill-authored review:
+For each skill-authored review, build two collections: `prior_findings.inline` (one entry per inline comment) and `prior_findings.general` (one entry per General Finding in the body).
 
-1. Fetch its inline comments — comments where `pull_request_review_id` equals the review's id.
-2. For each inline comment, extract the **finding signature**: the first non-empty line of the body, normalised (lowercase, badge emoji stripped). This is typically `**🔴 MUST** — <title>`, `**🟡 [Optional]** — <title>`, or `**🔵 [Question]** — <title>`.
-3. Record a `prior_findings` array:
-   ```
-   [
-     {"comment_id": 123, "path": "...", "line": 42, "signature": "must — missing #[\\override] on every interface-implementing method", "classification": "MUST"},
-     ...
-   ]
+### Inline comments
+
+1. Fetch comments where `pull_request_review_id` equals the review's id.
+2. For each inline comment, extract the **finding signature**: the first non-empty line of the body, normalised — lowercase, badge emoji stripped (`🔴 / 🟡 / 🔵`), leading classification token (`must / optional / question`) and surrounding punctuation stripped. The result is a topic key like `add // arrange / // act / // assert section comments to every test method`.
+3. Look up each comment's **resolved state**. The REST endpoint doesn't expose `isResolved` on inline comments — use GraphQL:
+
+   ```bash
+   gh api graphql -F owner=<owner> -F repo=<repo> -F pr=<pr_number> -f query='
+     query($owner: String!, $repo: String!, $pr: Int!) {
+       repository(owner: $owner, name: $repo) {
+         pullRequest(number: $pr) {
+           reviewThreads(first: 100) {
+             nodes {
+               isResolved
+               comments(first: 50) { nodes { databaseId } }
+             }
+           }
+         }
+       }
+     }'
    ```
 
-Report `prior_findings` as a distinct section in your output (separate from the unaddressed-comments section). The orchestrator's Section D consolidation step uses this to suppress re-emission of the same findings.
+   Each thread node has `isResolved` and a list of `comments.nodes.databaseId` values (these match the REST `comment.id`). Build a `comment_id -> resolved` map. A thread is resolved iff `isResolved == true`; every comment in that thread inherits the state.
+
+4. Record entries:
+
+   ```
+   {"comment_id": 3243485466,
+    "path": "src/.../FakeReportSummaryRepositoryTest.php",
+    "line": 23,
+    "signature": "add // arrange / // act / // assert section comments to every test method",
+    "classification": "MUST",
+    "resolved": false}
+   ```
+
+### General Findings (review body)
+
+Each skill-authored review's body has a top-level `## General Findings` section, with `### Required Changes`, `### Suggestions`, and `### Questions` subsections. Parse each bullet under those subsections:
+
+- Each finding's first bolded title line is the **signature** (apply the same normalisation as inline comments).
+- Bullets without a clear signature line can be skipped.
+
+Record entries:
+
+```
+{"review_id": 4292478648,
+ "signature": "pr description mismatch",
+ "classification": "OPTIONAL"}
+```
+
+### Output
+
+Report `prior_findings = {"inline": [...], "general": [...]}` as a distinct section in your output. The orchestrator's `references/consolidation-rules.md` Section D consumes this for **G8b** rule-based suppression: it matches new candidates by signature alone (not by file:line) and picks one of four actions — react, threaded-reply rollup, fresh inline, or drop — depending on overlap type and resolved state.
 
 ## Classification Rules
 

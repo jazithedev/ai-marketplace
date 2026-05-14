@@ -99,9 +99,11 @@ The downgrade/drop happens silently — the finding goes from MUST → Optional 
 
 ---
 
-## Section D — Prior skill-review suppression (G8)
+## Section D — Prior skill-review suppression (G8b)
 
-The orchestrator can detect its own past reviews on the PR and avoid re-emitting identical findings.
+The orchestrator can detect its own past reviews on the PR and avoid re-emitting findings whose underlying rule has already been raised — even when the new occurrence is on a different file.
+
+> **Principle: match by rule, not by location.** Two comments raising the same rule on different files are one conversation, not two. Threads should accumulate evidence over the PR's lifecycle, not fragment by file.
 
 ### Detection
 
@@ -113,25 +115,90 @@ _This code review was made automatically by Krzysztof Trzos Code Review AI Skill
 
 (The marker is stable across all versions of the skill — see SKILL.md Step 8's top-level body template.)
 
-### Algorithm
+### Input
 
-1. In Step 4, fetch all PR reviews via `gh api repos/{owner}/{repo}/pulls/{pr}/reviews --paginate --jq '.[] | select(.body | startswith("_This code review was made automatically by Krzysztof Trzos Code Review AI Skill._")) | {id, body}'`.
-2. For each skill-authored review, fetch its inline comments via `gh api repos/{owner}/{repo}/pulls/{pr}/comments --paginate --jq '.[] | select(.pull_request_review_id == <review_id>) | {id, path, line, body}'`.
-3. From each inline body, extract the **finding signature**:
-   - The first non-empty line — typically `**🔴 MUST** — <title>` or `**🟡 [Optional]** — <title>` or `**🔵 [Question]** — <title>`.
-   - Normalise (lowercase, strip whitespace, strip badge emoji) for matching.
-4. Build the `prior_signatures` set, mapping `signature → {comment_id, path, line}`.
+`prior_skill_findings`, produced by `agents/previous-comments.md` in Step 4c. It has two collections:
 
-### Suppression rules
+- `prior_skill_findings.inline` — one entry per inline comment with `{comment_id, path, line, signature, classification, resolved}`
+- `prior_skill_findings.general` — one entry per General Finding parsed from the body with `{review_id, signature, classification}`
 
-In Section A (cross-agent dedup), after merging:
+Both collections use the same signature normalisation: lowercase, badge emoji stripped (`🔴 / 🟡 / 🔵`), leading classification token (`must / optional / question`) and surrounding punctuation stripped. The result is a topic key like `add // arrange / // act / // assert section comments to every test method`.
 
-- Compute the candidate finding's signature using the same extraction.
-- If it matches a `prior_signatures` entry:
-  - **Move the finding to the "Existing Threads" bucket** with `stance = "react"` and `comment_id = <prior comment id>`. This causes Step 8 to post a 👍 reaction on the prior comment instead of a new inline comment.
-  - The reasoning: re-posting the same finding creates noise and clutters the PR conversation. A reaction is a low-cost re-acknowledgement.
+### Indexes
 
-Exception: if the candidate finding's classification is **stricter** than the prior (e.g., the prior was `[Optional]`, the new is `MUST`), keep it as a fresh finding — the severity escalated, the author needs to see it again.
+Build two indexes keyed by normalised signature:
+
+- `inline_index: signature -> list of inline entries`
+- `general_index: signature -> list of general entries`
+
+### Action selection (four cases)
+
+For each new candidate finding still in the working set after Step 6 sub-steps 1–7:
+
+```
+sig = normalise(candidate.signature)
+
+if candidate.bucket == "inline":
+    matches = inline_index.get(sig, [])
+    unresolved = [m for m in matches if not m.resolved]
+    same_file_unresolved = [m for m in unresolved if m.path == candidate.path]
+
+    if same_file_unresolved:
+        # Case 1 — same file, same rule, prior thread still open
+        → Move to Existing Threads bucket: stance = "react", comment_id = same_file_unresolved[0].comment_id
+    elif unresolved:
+        # Case 2 — different file, same rule, prior thread still open
+        → Move to Existing Threads bucket: stance = "reply", comment_id = unresolved[lowest].comment_id
+          reply_body = cross-file rollup listing every new (file, line, locator) for this signature
+    elif matches:
+        # Case 3 — only resolved matches; the rule was addressed for prior locations, this is new ground
+        → Keep as fresh inline finding
+    else:
+        # Case 5 — no match at all
+        → Keep as fresh inline finding
+
+elif candidate.bucket == "general":
+    if sig in general_index:
+        # Case 4 — same rule already in the prior review body; re-listing is noise
+        → Drop the candidate entirely
+    else:
+        → Keep as a new General Finding
+```
+
+### Tie-breaking when multiple matches exist
+
+For Case 2 (cross-file reply rollup), if `unresolved` has multiple entries on different files, pick the one with the **lowest** `comment_id` (the first prior comment chronologically). Rationale: rolling new locations into the oldest thread gives the longest-running conversation the full picture; the author has already engaged with whichever thread they care about.
+
+### Classification escalation
+
+When `candidate.classification` is **stricter** than the matched prior (e.g., the prior was `[Optional]`, the candidate is `MUST`):
+
+- For Case 1 — promote to `stance = "reply"` with a body explaining the escalation, instead of a silent react.
+- For Case 2 — same; the reply body should call out the escalation.
+- For Cases 3 and 5 — already fresh, no change.
+- For Case 4 — escalating a General Finding from `[Optional]` to `MUST` is rare; treat as Case 5 (keep fresh) and let the new posting carry the upgraded severity.
+
+### Cross-file reply body template
+
+```markdown
+The same rule applies to additional locations in this PR:
+- `<path>` — <short locator> (line <N>)
+- `<path>` — <short locator> (line <N>)
+
+Rolling into this thread instead of opening a parallel one.
+```
+
+No auto-generation notice on the reply (per SKILL.md — the notice lives only on top-level review bodies).
+
+### Worked examples
+
+| Case | Prior | Candidate | G8b action |
+|------|-------|-----------|------------|
+| 1 | Inline, unresolved, `FakeXTest.php:23`, sig `add aaa comments...` | Inline, `FakeXTest.php:23`, same sig | 👍 react on the prior |
+| 2 | Inline, unresolved, `FakeXTest.php:23`, sig `add aaa comments...` | Inline, `EntityXTest.php:23`, same sig | Reply rollup on the prior |
+| 3 | Inline, **resolved**, `FakeXTest.php:23`, sig `add aaa comments...` | Inline, `EntityXTest.php:23`, same sig | Fresh inline on `EntityXTest.php` |
+| 4 | General Finding in prior body, sig `pr description mismatch` | General Finding, same sig | Drop entirely |
+| 5 | No prior with this sig | Anything | Fresh, normal posting |
 
 ---
 
@@ -153,7 +220,8 @@ After all consolidation passes, each finding in the cleaned list has the followi
   "agent_classifications": {"bug-smell-scan": "MUST", "tactical-ddd": "QUESTION"},  // only when disagreement
   "consolidated_locations": [{"file": "...", "line": N, "identifier": "save()"}, ...],  // only after G1 merge
   "suggested_fix": "<code snippet>",
-  "prior_review_comment_id": <int>,  // only if G8 matched a prior comment
-  "stance": "react" | "reply" | "new"
+  "prior_review_comment_id": <int>,  // only if G8b matched a prior comment
+  "stance": "react" | "reply" | "new",
+  "reply_body": "<cross-file rollup text>"  // only when stance == "reply"
 }
 ```

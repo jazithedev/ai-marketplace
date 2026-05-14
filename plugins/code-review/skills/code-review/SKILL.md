@@ -117,14 +117,36 @@ Step 4 is **four** parallel collection passes:
 
 **4b. Reviewer auto-memory (G5).** Read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/reviewer-memory-loading.md` and follow the load procedure to produce a `{reviewer_rules}` block. Encoding rule: replace `/` with `-` in the current working directory, prepend `~/.claude/projects/`, then read the resulting directory's `MEMORY.md` and every linked memory file. Filter to `type ∈ {feedback, user}`. Pass `{reviewer_rules}` to Agents 1, 5, 8 in Step 5. If `MEMORY.md` does not exist, the block is empty.
 
-**4c. Prior skill-authored reviews (G8) — PR mode only.** Fetch existing reviews:
+**4c. Prior skill-authored reviews (G8b) — PR mode only.** Fetch existing reviews:
 
 ```bash
 gh api repos/{owner}/{repo}/pulls/{pr}/reviews --paginate \
   --jq '.[] | select(.body | startswith("_This code review was made automatically by Krzysztof Trzos Code Review AI Skill._")) | {id, body}'
 ```
 
-For each match, fetch its inline comments via `gh api repos/{owner}/{repo}/pulls/{pr}/comments --paginate` filtered to `pull_request_review_id == <review_id>`. Build the `{prior_skill_findings}` array — see `references/consolidation-rules.md` Section D for the shape. Pass it to Agent 4.
+For each match, fetch its inline comments via `gh api repos/{owner}/{repo}/pulls/{pr}/comments --paginate` filtered to `pull_request_review_id == <review_id>`. Also fetch review-thread **resolved state** via GraphQL — REST doesn't expose `isResolved` on inline comments:
+
+```bash
+gh api graphql -F owner={owner} -F repo={repo} -F pr={pr} -f query='
+  query($owner: String!, $repo: String!, $pr: Int!) {
+    repository(owner: $owner, name: $repo) {
+      pullRequest(number: $pr) {
+        reviewThreads(first: 100) {
+          nodes {
+            isResolved
+            comments(first: 50) { nodes { databaseId } }
+          }
+        }
+      }
+    }
+  }'
+```
+
+Build a `comment_id -> resolved` map (every comment in a resolved thread inherits the state).
+
+Additionally, parse each prior skill-authored review's body for `## General Findings` entries — see `agents/previous-comments.md` § Skill-self-detection for the parsing rules.
+
+Build the `{prior_skill_findings}` object with both `inline` and `general` collections — see `references/consolidation-rules.md` Section D for the exact shape. Pass it to Agent 4.
 
 **4d. Stacked-PR detection (S4).** Look at `baseRefName` from Step 1. If it is NOT in `{main, master, develop, production}`, this is a stacked PR. Pass `{base_ref}` and `{default_branch}` to Agent 3 so it can run `git log <default_branch>..<base_ref>` and surface conventions established in earlier stack PRs.
 
@@ -184,7 +206,13 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/consolidation-rules.md
    - The original comment ID (you'll need it to react/reply)
    - Stance: `react` if your point is identical to the existing comment, `reply` if you have something to add.
    - For `reply`: the body text you'd post inside the thread — keep it short, only what's actually additive.
-9. **Match prior skill-authored reviews (G8)** — see Section D of `consolidation-rules.md`. Using the `{prior_skill_findings}` collected in Step 4c, suppress re-emission: if a candidate finding signature matches a prior skill comment, demote it to the **Existing Threads** bucket as a 👍-react on that prior comment. Exception: if the new finding is stricter than the prior (e.g., escalating Optional → MUST), keep it as a fresh finding.
+9. **Match prior skill-authored artefacts (G8b)** — see Section D of `consolidation-rules.md`. Matching is **by rule (normalised signature), not by file:line**, so the same rule on a different file is recognised as related work. Using the `{prior_skill_findings}` from Step 4c, each candidate maps to one of four actions:
+   - **Same file, prior thread open** → 👍 react on the prior comment.
+   - **Different file, prior thread open** → threaded reply on the oldest matching prior comment with a cross-file rollup listing the new locations.
+   - **Only resolved priors match** → keep as a fresh inline finding (the rule was addressed for the old locations; this is new ground).
+   - **General Finding already in a prior body** → drop the candidate entirely.
+
+   Classification escalation (e.g., prior was `[Optional]`, candidate is `MUST`) flips Case 1 (react) into Case 2 (reply with an escalation note).
 10. Collect positive observations from Agent 8.
 11. **Collect Obstacles Encountered** from every agent's output. Deduplicate identical entries and keep them verbatim. Drop entries that say "None".
 12. Group by classification (MUST → OPTIONAL → QUESTION) and within each, sort by confidence descending.
