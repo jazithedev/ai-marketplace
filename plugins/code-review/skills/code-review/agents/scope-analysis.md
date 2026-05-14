@@ -18,6 +18,7 @@ You will receive: PR Title, PR Description, PR Diff Stats, PR Diff.
 6. Check if the description is empty or insufficient
 7. Check for "while I was here" changes — unrelated cleanup, formatting, or fixes mixed in
 8. Check if frontend and backend changes are mixed in a single PR
+9. **Description-vs-diff cross-check (S1):** extract from the description (a) filenames matching `[A-Z][A-Za-z0-9_]+\.(php|ts|tsx|js|py|go|java|rb)`, (b) class names in PascalCase (with or without `::class`), (c) specific behaviour claims ("now does X", "renamed Y to Z"). For each extracted token, verify it appears in the diff (file paths and content). Emit a `description-vs-diff-mismatch` finding for any token that's in the description but absent in the diff. Common cause: author renamed a file/class within the PR but didn't update the description. Classification: `OPTIONAL`, anchor it as a PR-level General Finding (no file:line).
 
 ## Output Format
 
@@ -26,6 +27,7 @@ Return a structured assessment:
 - SCOPE_PASS: true/false
 - VIOLATIONS: list of specific violations with file references
 - SUGGESTED_SPLITS: if violations found, provide numbered steps for how to split this into separate PRs
+- DESCRIPTION_MISMATCHES: list of tokens (filenames/classnames/claims) present in the PR description but absent from the diff (empty list if none)
 
 Additionally, end your output with one final line:
 - **Obstacles Encountered:** Report any obstacles encountered during the review process — setup issues, workarounds discovered, or environment quirks. Report commands that needed a special flag or configuration. Report dependencies or imports that caused problems. If none, write "None".

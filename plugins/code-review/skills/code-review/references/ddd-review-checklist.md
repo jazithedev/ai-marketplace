@@ -71,7 +71,9 @@ The default for most items below is MUST, unless the reviewer determines the con
 ### Cross-Module Domain Leaks
 - Domain classes importing from another module's domain layer directly
 - Shared domain types that belong to a specific bounded context but are used across modules
-- Should use: integration events, published language/contracts, or explicit shared kernel
+- Preferred alternatives: integration events, published query/command contracts, or an ACL-translated context-local VO
+- **Do not** propose "use a shared enum / shared VO" (e.g., `Shared\Application\Enum\Tool`) as a fix. Cross-module reuse of a single type forces lock-step evolution and is anti-DDD. Each bounded context owns its ubiquitous language. A shared kernel is a last-resort coordination artifact requiring explicit joint ownership — never a casual cleanup recommendation.
+- When two modules independently model the same concept (two `ReportStatus` enums, two `LocationId` VOs, a free-string identifier and a `Shared/*` enum with overlapping values), treat the duplication as **deliberate Customer-Supplier or Conformist coordination by default**. Flag it as a QUESTION only if the rationale is genuinely unclear — and frame the question as "is this context-local representation correct?", not "should you reuse `Shared\X`?".
 
 ### Ubiquitous Language Violations
 - Class/method names using technical jargon instead of domain terminology

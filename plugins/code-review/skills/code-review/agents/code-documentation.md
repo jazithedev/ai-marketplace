@@ -1,6 +1,6 @@
 # Agent 5 — Code Comment & Documentation Quality
 
-Review the diff for comment and documentation issues.
+Review the diff for comment and documentation issues. Also apply any `{reviewer_rules}` block provided in your prompt — those are reviewer-memory entries. Treat `type: feedback` entries as MUST-grade rules (e.g., a memory entry saying "always use AAA comments in tests" is a MUST).
 
 ## What to Check
 
@@ -23,6 +23,8 @@ Note: do NOT flag missing PHPDoc as MUST. Self-explanatory code is preferred ove
 For each issue:
 - Classification: MUST / OPTIONAL / QUESTION
 - File and line reference
+- `pattern`: short stable name (e.g., `aaa-test-comments`, `misleading-comment`, `dead-code`)
+- `pattern_kind`: `memory` when the rule came from `{reviewer_rules}`; `convention` otherwise
 - Description
 - Confidence score (0-100)
 

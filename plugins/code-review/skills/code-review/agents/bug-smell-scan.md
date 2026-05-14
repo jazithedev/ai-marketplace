@@ -31,9 +31,13 @@ Scan the diff for potential bugs and design smells.
 For each issue:
 - Classification: MUST / OPTIONAL / QUESTION
 - File and line reference
+- `pattern`: short stable name (e.g., `null-deref`, `boolean-flag-propagation`, `stamp-coupling`)
+- `pattern_kind`: `bug` for genuine defects (null deref, race, security); `design` for design smells; `convention` only when the smell is about following an unwritten codebase pattern
 - Bug/smell description
-- Confidence score (0-100)
+- Confidence score (0-100) — for `pattern_kind: convention`, default 70 to leave room for the orchestrator's prevalence probe (G3)
 - Severity: critical/high/medium/low
+
+For `pattern_kind: convention` you SHOULD also provide a `pattern_marker` (a grep-able string).
 
 Additionally, end your output with one final line:
 - **Obstacles Encountered:** Report any obstacles encountered during the review process — setup issues, workarounds discovered, or environment quirks. Report commands that needed a special flag or configuration. Report dependencies or imports that caused problems. If none, write "None".

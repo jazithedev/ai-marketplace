@@ -8,7 +8,8 @@ Check for previous review comments on the same PR and on recent PRs touching the
 
 ```bash
 gh pr view <PR> --json comments,reviews
-gh api repos/{owner}/{repo}/pulls/<PR>/comments
+gh api repos/{owner}/{repo}/pulls/<PR>/comments --paginate
+gh api repos/{owner}/{repo}/pulls/<PR>/reviews --paginate
 ```
 
 ## What to Look For
@@ -17,6 +18,29 @@ gh api repos/{owner}/{repo}/pulls/<PR>/comments
 - Patterns of repeated feedback on the same files
 - Previous review suggestions that weren't implemented
 - Conflicting feedback from different reviewers
+- **Prior skill-authored reviews** — see "Skill-self-detection" below
+
+## Skill-self-detection (G8)
+
+Among the reviews you fetch, some may have been authored by **this same skill in a previous run**. Detect them by checking whether the review body starts with this exact marker line:
+
+```
+_This code review was made automatically by Krzysztof Trzos Code Review AI Skill._
+```
+
+For each skill-authored review:
+
+1. Fetch its inline comments — comments where `pull_request_review_id` equals the review's id.
+2. For each inline comment, extract the **finding signature**: the first non-empty line of the body, normalised (lowercase, badge emoji stripped). This is typically `**🔴 MUST** — <title>`, `**🟡 [Optional]** — <title>`, or `**🔵 [Question]** — <title>`.
+3. Record a `prior_findings` array:
+   ```
+   [
+     {"comment_id": 123, "path": "...", "line": 42, "signature": "must — missing #[\\override] on every interface-implementing method", "classification": "MUST"},
+     ...
+   ]
+   ```
+
+Report `prior_findings` as a distinct section in your output (separate from the unaddressed-comments section). The orchestrator's Section D consolidation step uses this to suppress re-emission of the same findings.
 
 ## Classification Rules
 
