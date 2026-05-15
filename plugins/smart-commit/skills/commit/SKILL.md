@@ -66,6 +66,8 @@ The branch name contains the issue/ticket number. Extract it:
 
 Look for a Jira-style key first (`[A-Z]+-\d+`), then fall back to the first numeric segment. Prefix the result with `#`. If nothing is found, ask the user for the issue reference or omit the footer.
 
+**The extracted issue reference is used in the footer only** (e.g., `Refs: #AM-4256`). It **must never** appear as the scope. `feat(AM-4256): subject` is wrong — the scope describes the section of the codebase affected (e.g., `map`, `auth`, `websocket`), not the ticket key.
+
 ### A.3. Compose the commit message
 
 Follow the Conventional Commits format described in the [Commit Message Format](#commit-message-format) section below.
@@ -440,6 +442,8 @@ If the project has no `CONTRIBUTING.md`, fall back to standard Conventional Comm
 
 If changes span multiple scopes, use the most dominant one. If truly cross-cutting, omit the scope.
 
+**Scope must describe the codebase area, never the issue tracker key.** A Jira ticket / issue ID (e.g., `AM-1234`, `PROJ-42`, `#456`) is a reference to work, not a section of code. It belongs in the footer as `Refs: #AM-1234` (or `Fixes:` / `Closes:`), and never inside the `<type>(<scope>):` prefix. `feat(AM-1234): subject` is wrong; `feat(map): subject` followed by `Refs: #AM-1234` in the footer is correct. If no meaningful codebase scope applies, omit the scope entirely — do not substitute the ticket key.
+
 ---
 
 ## Rules
@@ -456,4 +460,5 @@ If changes span multiple scopes, use the most dominant one. If truly cross-cutti
 - **Always** ensure no stubs remain after the final commit — all real code must be restored (Path B)
 - **Never** insert artificial line breaks into commit message body text — the box-drawing frame wraps lines for display, but the actual `git commit` message must use one continuous line per paragraph (git and hosting tools handle wrapping)
 - **Always** use `:<space>` separator in footer tokens (e.g., `Refs: #AM-1234`, not `Refs #AM-1234`)
+- **Never** put the Jira ticket / issue ID in the scope. `feat(AM-1234): subject` is forbidden. Scope is a codebase area (e.g., `map`, `auth`); the ticket reference goes in the footer (`Refs: #AM-1234`). If no codebase scope fits, drop the scope rather than substituting the ticket key.
 - If a pre-commit hook fails, report the failure and help fix the issue, then create a **new** commit (never amend)

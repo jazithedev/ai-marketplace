@@ -22,6 +22,7 @@ Based on the [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en
 
 - **Optional.** A noun in parentheses after the type describing the section of the codebase affected.
 - Example: `fix(parser): handle empty input`
+- **Not for issue tracker keys.** A Jira / GitHub ticket reference (e.g., `AM-1234`, `PROJ-42`, `#456`) is not a scope — it belongs in a footer token (`Refs: #AM-1234`, `Fixes: #AM-1234`, `Closes: #AM-1234`). `feat(AM-1234): subject` violates this rule. If no codebase area fits, omit the scope rather than substituting the ticket key.
 
 ## Description
 
