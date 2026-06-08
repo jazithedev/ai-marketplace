@@ -80,6 +80,13 @@ The default for most items below is MUST, unless the reviewer determines the con
 - Inconsistent naming: same concept called different things in different places
 - Generic names (Manager, Handler, Processor, Helper, Utils) where domain-specific names exist
 
+### Module Naming & Placement (a Module IS a Bounded Context)
+This check applies only where the project organizes code into modules/bounded-contexts that represent business capabilities. First identify, from the project's own structure and conventions (CLAUDE.md/AGENTS.md, existing directory layout), (a) where business modules/bounded-contexts live and (b) where reusable technical/shared/cross-cutting code lives. Then:
+- **A new module/bounded-context named after a technical capability or infrastructure concern instead of a business subdomain.** A business module represents a Bounded Context — a slice of the *business* domain — so its name should denote a business subdomain (e.g. `Reviews`, `Billing`, `Reporting`), not a technical mechanism. Red-flag name families: `OAuth`, `Auth`, `Cache`, `Queue`, `Http`, `Notification` (as a transport), `Webhook`, `Encryption`, `Logging`, protocol/integration names, etc. These describe *how*, not *what business capability*.
+- **Technical/cross-cutting/library-like capabilities belong in the project's technical/shared layer, not alongside business modules.** If the thing being created is a reusable technical building block (a client, a protocol implementation, an integration mechanism) rather than a business subdomain, it belongs wherever this project keeps shared/technical code (e.g. a components/shared/common/infrastructure area — use the project's actual convention). Raise this as a QUESTION on any new business-module entry whose name reads as technical: *is this a business subdomain (a module), or a technical capability that belongs in the shared/technical layer?*
+- **Do NOT be reassured by the term already appearing elsewhere in the codebase.** A technical word being used in existing class names, variables, or other modules does NOT make it a valid Bounded Context name. "The term is established in the code" is not evidence that it names a business subdomain — judge the *new module's name* on whether it denotes a business capability, independent of incidental usage elsewhere.
+- This check applies even to scaffold-only / skeleton PRs (empty placeholder dirs, dependency-boundary config, DI wiring) — naming and placement are precisely the decisions that are cheapest to fix before code lands and most expensive after.
+
 ### Bounded Context Erosion
 - A single class or module serving concerns of multiple bounded contexts
 - God classes that mix vocabulary from different subdomains

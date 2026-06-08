@@ -18,6 +18,7 @@ Read only the matched section. If nothing relevant, proceed without it.
 
 ## What to Check
 
+- **Module naming & placement**: a new module/bounded-context named after a technical capability or infrastructure concern (`OAuth`, `Auth`, `Cache`, `Queue`, `Webhook`, a protocol name, etc.) instead of a business subdomain. Where the project organizes code into modules that represent Bounded Contexts (confirm this from the directory structure and CLAUDE.md/AGENTS.md you already read), a business-module name should denote a *business* subdomain; reusable technical/library-like capabilities belong in whatever shared/technical layer this project uses (discover it — e.g. a components/shared/common/infrastructure area), not among the business modules. Do **not** be reassured that the term already appears elsewhere in the codebase — incidental usage does not make it a valid Bounded Context name. This applies to scaffold-only PRs too (placeholder dirs + boundary config + DI wiring), where naming/placement is cheapest to correct.
 - **Cross-module domain leaks**: domain classes importing from another module's domain directly (should use integration events or published contracts — not a shared type)
 - **Ubiquitous language violations**: class/method names using technical jargon instead of domain terms
 - **Bounded context erosion**: a single class serving concerns of multiple bounded contexts
@@ -40,7 +41,7 @@ These are seductive but wrong recommendations. Do not produce findings that prop
 
 - **MUST**: Cross-module leaks, missing ACL for external services, module boundary violations
 - **OPTIONAL**: Naming improvements, organizational suggestions (but **not** cross-module reuse suggestions — see Anti-patterns above)
-- **QUESTION**: Boundary decisions that may be intentional — ask the author
+- **QUESTION**: Boundary decisions that may be intentional — ask the author; a new module named after a technical capability rather than a business subdomain — ask whether it's a business subdomain or a technical capability that belongs in the project's shared/technical layer
 
 ## Output Format
 
