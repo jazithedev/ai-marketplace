@@ -7,7 +7,7 @@
   },
   "metadata": {
     "description": "Community-driven collection of Claude Code skills, agents, and plugins for software development workflows",
-    "version": "1.3.0"
+    "version": "1.4.0"
   },
   "plugins": [
     {
@@ -61,6 +61,19 @@
       "keywords": ["planning", "design-review", "interview", "brainstorming", "productivity"],
       "license": "MIT",
       "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/grill-me"
+    },
+    {
+      "name": "karpathy-guidelines",
+      "description": "Behavioral guidelines that reduce common LLM coding mistakes — surface assumptions, keep changes simple and surgical, and define verifiable success criteria. Derived from Andrej Karpathy's observations on LLM coding pitfalls, packaged from the multica-ai skills collection.",
+      "version": "1.0.0",
+      "author": {
+        "name": "multica-ai"
+      },
+      "source": "./plugins/karpathy-guidelines",
+      "category": "quality",
+      "keywords": ["code-quality", "guidelines", "llm", "best-practices", "refactoring"],
+      "license": "MIT",
+      "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/karpathy-guidelines"
     }
   ]
 }

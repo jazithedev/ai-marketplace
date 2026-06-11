@@ -1,0 +1,12 @@
+{
+  "name": "karpathy-guidelines",
+  "description": "Behavioral guidelines that reduce common LLM coding mistakes — surface assumptions, keep changes simple and surgical, and define verifiable success criteria. Derived from Andrej Karpathy's observations on LLM coding pitfalls.",
+  "version": "1.0.0",
+  "author": {
+    "name": "multica-ai"
+  },
+  "license": "MIT",
+  "keywords": ["code-quality", "guidelines", "llm", "best-practices", "refactoring"],
+  "repository": "https://github.com/jazithedev/ai-marketplace",
+  "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/karpathy-guidelines"
+}
