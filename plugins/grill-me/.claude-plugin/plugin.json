@@ -1,0 +1,12 @@
+{
+  "name": "grill-me",
+  "description": "Interview skill that relentlessly questions you about a plan or design — walking each branch of the decision tree one question at a time, with recommended answers — until you reach shared understanding",
+  "version": "1.0.0",
+  "author": {
+    "name": "Matt Pocock"
+  },
+  "license": "MIT",
+  "keywords": ["planning", "design-review", "interview", "brainstorming", "productivity"],
+  "repository": "https://github.com/jazithedev/ai-marketplace",
+  "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/grill-me"
+}

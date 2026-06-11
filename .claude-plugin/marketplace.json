@@ -7,7 +7,7 @@
   },
   "metadata": {
     "description": "Community-driven collection of Claude Code skills, agents, and plugins for software development workflows",
-    "version": "1.2.3"
+    "version": "1.3.0"
   },
   "plugins": [
     {
@@ -48,6 +48,19 @@
       "keywords": ["code-review", "pr-review", "github", "ddd", "quality", "review-automation"],
       "license": "MIT",
       "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/code-review"
+    },
+    {
+      "name": "grill-me",
+      "description": "Interview skill that relentlessly questions you about a plan or design — walking each branch of the decision tree one question at a time, with recommended answers — until you reach shared understanding. Adapted from Matt Pocock's skills collection.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Matt Pocock"
+      },
+      "source": "./plugins/grill-me",
+      "category": "productivity",
+      "keywords": ["planning", "design-review", "interview", "brainstorming", "productivity"],
+      "license": "MIT",
+      "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/grill-me"
     }
   ]
 }
