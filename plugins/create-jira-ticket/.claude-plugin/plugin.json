@@ -1,0 +1,13 @@
+{
+  "name": "create-jira-ticket",
+  "description": "Turn a short brief into a well-structured Jira ticket — Context, Expected Result, GIVEN/WHEN/THEN acceptance criteria, and optional QA Notes and Implementation Plan expanders. Site- and project-agnostic; remembers your filing preferences and previews the full ticket before creating it.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Krzysztof Trzos",
+    "email": "k.trzos@jazi.pl"
+  },
+  "license": "MIT",
+  "keywords": ["jira", "ticket", "issue-tracking", "atlassian", "productivity"],
+  "repository": "https://github.com/jazithedev/ai-marketplace",
+  "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/create-jira-ticket"
+}
