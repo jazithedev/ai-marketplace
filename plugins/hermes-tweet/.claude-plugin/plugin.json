@@ -1,0 +1,20 @@
+{
+  "name": "hermes-tweet",
+  "description": "Hermes Agent X/Twitter route discovery, public reads, and approval-gated social actions through Xquik.",
+  "version": "0.1.6",
+  "author": {
+    "name": "Xquik-dev"
+  },
+  "license": "MIT",
+  "keywords": [
+    "hermes-agent",
+    "x",
+    "twitter",
+    "social-media",
+    "xquik",
+    "tweet",
+    "automation"
+  ],
+  "repository": "https://github.com/Xquik-dev/hermes-tweet",
+  "homepage": "https://github.com/Xquik-dev/hermes-tweet"
+}
