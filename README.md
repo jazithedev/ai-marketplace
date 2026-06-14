@@ -32,6 +32,7 @@ Community-driven collection of Claude Code plugins — skills, agents, and tools
 | [grill-me](plugins/grill-me) | Productivity | Relentlessly interviews you about a plan or design, one question at a time, until you reach shared understanding ([source](https://github.com/mattpocock/skills/blob/main/skills/productivity/grill-me/SKILL.md)) |
 | [karpathy-guidelines](plugins/karpathy-guidelines) | Quality | Behavioral guidelines that reduce common LLM coding mistakes — simple, surgical, verifiable changes ([source](https://github.com/multica-ai/andrej-karpathy-skills/blob/main/skills/karpathy-guidelines/SKILL.md)) |
 | [create-jira-ticket](plugins/create-jira-ticket) | Productivity | Turn a short brief into a well-structured Jira ticket — Context, Expected Result, GIVEN/WHEN/THEN criteria, and optional QA Notes / Implementation Plan expanders; previews before creating |
+| [hermes-tweet](plugins/hermes-tweet) | Research | Hermes Agent X/Twitter route discovery, public reads, and approval-gated social actions through Xquik |
 
 ## Contributing
 

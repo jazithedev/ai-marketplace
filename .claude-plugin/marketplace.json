@@ -19,7 +19,12 @@
       },
       "source": "./plugins/smart-commit",
       "category": "productivity",
-      "keywords": ["git", "commit", "conventional-commits", "workflow"],
+      "keywords": [
+        "git",
+        "commit",
+        "conventional-commits",
+        "workflow"
+      ],
       "license": "MIT",
       "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/smart-commit"
     },
@@ -32,7 +37,14 @@
       },
       "source": "./plugins/module-docs-generator",
       "category": "documentation",
-      "keywords": ["documentation", "ddd", "modular-monolith", "php", "agents-md", "contracts"],
+      "keywords": [
+        "documentation",
+        "ddd",
+        "modular-monolith",
+        "php",
+        "agents-md",
+        "contracts"
+      ],
       "license": "MIT",
       "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/module-docs-generator"
     },
@@ -45,7 +57,14 @@
       },
       "source": "./plugins/code-review",
       "category": "quality",
-      "keywords": ["code-review", "pr-review", "github", "ddd", "quality", "review-automation"],
+      "keywords": [
+        "code-review",
+        "pr-review",
+        "github",
+        "ddd",
+        "quality",
+        "review-automation"
+      ],
       "license": "MIT",
       "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/code-review"
     },
@@ -58,7 +77,13 @@
       },
       "source": "./plugins/grill-me",
       "category": "productivity",
-      "keywords": ["planning", "design-review", "interview", "brainstorming", "productivity"],
+      "keywords": [
+        "planning",
+        "design-review",
+        "interview",
+        "brainstorming",
+        "productivity"
+      ],
       "license": "MIT",
       "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/grill-me"
     },
@@ -71,7 +96,13 @@
       },
       "source": "./plugins/karpathy-guidelines",
       "category": "quality",
-      "keywords": ["code-quality", "guidelines", "llm", "best-practices", "refactoring"],
+      "keywords": [
+        "code-quality",
+        "guidelines",
+        "llm",
+        "best-practices",
+        "refactoring"
+      ],
       "license": "MIT",
       "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/karpathy-guidelines"
     },
@@ -84,9 +115,36 @@
       },
       "source": "./plugins/create-jira-ticket",
       "category": "productivity",
-      "keywords": ["jira", "ticket", "issue-tracking", "atlassian", "productivity"],
+      "keywords": [
+        "jira",
+        "ticket",
+        "issue-tracking",
+        "atlassian",
+        "productivity"
+      ],
       "license": "MIT",
       "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/create-jira-ticket"
+    },
+    {
+      "name": "hermes-tweet",
+      "description": "Hermes Agent X/Twitter route discovery, public reads, and approval-gated social actions through Xquik.",
+      "version": "0.1.6",
+      "author": {
+        "name": "Xquik-dev"
+      },
+      "source": "./plugins/hermes-tweet",
+      "category": "research",
+      "keywords": [
+        "hermes-agent",
+        "x",
+        "twitter",
+        "social-media",
+        "xquik",
+        "tweet",
+        "automation"
+      ],
+      "license": "MIT",
+      "homepage": "https://github.com/Xquik-dev/hermes-tweet"
     }
   ]
 }
