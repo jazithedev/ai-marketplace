@@ -22,7 +22,7 @@ The default for most items below is MUST, unless the reviewer determines the con
 
 ### Value Object Issues
 - Value objects that are mutable (have setters or state-changing methods)
-- Value objects missing self-validation in constructor
+- Value objects missing self-validation in constructor — **MUST**. A VO has to reject every invalid state in its own constructor (throw `InvalidArgumentException`), not trust a caller to pass clean data. Check each property against its real invariant: integer identifiers must be `> 0` (reject `0` and negatives), strings that represent a present value must be non-empty after trimming (reject `''` and whitespace-only), an `$email` must pass `filter_var(..., FILTER_VALIDATE_EMAIL)`, etc. Flag as MUST when a VO accepts e.g. `userId <= 0`, an empty-string `packageId`, or an unvalidated `email` — even if some upstream service (resolver, factory) happens to normalize the input today, because the VO is also constructed directly in tests and by future callers. Apply this to **every** VO in the change, not just the first one spotted.
 - Primitive obsession: using raw types (string, int) where a value object would enforce invariants
 - Missing equality by value (comparing by reference instead of by properties)
 - Value objects with ambiguous property names (e.g., `$date` when timezone matters — should be `$dateInUtc`)
