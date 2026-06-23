@@ -103,6 +103,10 @@ Whenever a code-level token appears in **any** section, wrap it so it reads unam
   with backticks (illustrative names only): `` `InvoiceCalculator` ``, `` `Billing\Tax\VatResolver` ``,
   `` `int` ``, `` `order_items` ``.
 - Multi-line snippets (method signatures, SQL, config, JSON) → a fenced code block.
+- Commit / MR / issue references → a **clickable link**, never a bare SHA as plain text. Use a
+  Markdown link to the full commit URL with the short SHA as the text
+  (`` [`f5a760db`](https://gitlab.com/<group>/<project>/-/commit/<full-sha>) ``), or GitLab's
+  native references (`!42`, `#7`, `` project@<sha> ``) which auto-link in-project.
 
 This matters most in Context / Expected Result (where a stray bare class name confuses a PM), but
 apply it everywhere for consistency — including inside the Implementation Plan block.

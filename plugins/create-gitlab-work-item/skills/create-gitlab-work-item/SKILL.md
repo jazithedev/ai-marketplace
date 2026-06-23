@@ -137,6 +137,13 @@ so it's visually distinct and unambiguous. Use a fenced code block for multi-lin
 (signatures, config, SQL). (These are illustrative names only — use the real identifiers from
 whatever codebase you're working in.)
 
+When the body references a specific commit, merge request, or issue, **link it directly** rather than
+leaving a bare identifier as plain text — the reader should be able to click through. Use a Markdown
+link to the full URL, showing the short SHA as the link text — e.g.
+`` [`f5a760db`](https://gitlab.com/<group>/<project>/-/commit/<full-40-char-sha>) `` for a commit — or
+GitLab's native references that auto-link in-project: `!42` (merge request), `#7` (issue),
+`` project@<sha> `` (cross-project commit). Never paste a raw SHA as plain text.
+
 Also draft the **title** following `references/work-item-title-rules.md` — pick the pattern for the
 chosen type, keep it to one outcome, and make it understandable without opening the work item. Keep
 the title **PM-understandable**: default to plain language and include code-level technicals only when
@@ -176,20 +183,24 @@ shared tracker. If they want changes, revise and re-show.
 ### 6. Create the work item
 
 Create it with **`glab api`** (uniform path for all types). Write the markdown description to a temp
-file and pass it with `-f description=@<file>` so newlines and special characters survive intact (the
-smart `-f` flag reads `@file`). See `references/gitlab-markdown.md` for the full field mapping and the
-`-f` (smart: `@file`/booleans/numbers) vs `-F` (raw string) distinction; the shape is:
+file and feed it on **stdin** with `-F description=@-` so newlines and special characters survive
+intact — and so it works even when `glab` is installed as a confined **snap** that cannot read files
+under hidden or arbitrary paths (a plain `-F description=@/path/to/file` fails there with "permission
+denied"; stdin is opened by the unconfined shell). See `references/gitlab-markdown.md` for the full
+field mapping and the `-F` (smart: `@file`/`@-`/booleans/numbers) vs `-f` (raw string) distinction —
+note the short flags are the opposite of what you might guess. The shape is:
 
 ```
 glab api --method POST "projects/<url-encoded-path>/issues" \
-  -F title="<title>" \
-  -f description=@<body.md> \
-  -F issue_type=<issue|incident|task|test_case> \
-  [-F labels="<existing,labels>"] \
-  [-f confidential=true] \
-  [-f milestone_id=<id>] \
-  [-f epic_id=<id>] \
-  [-f "assignee_ids[]=<id>"]
+  -f title="<title>" \
+  -F description=@- \
+  -f issue_type=<issue|incident|task|test_case> \
+  [-f labels="<existing,labels>"] \
+  [-F confidential=true] \
+  [-F milestone_id=<id>] \
+  [-F epic_id=<id>] \
+  [-F "assignee_ids[]=<id>"] \
+  < body.md
 ```
 
 - Pass **only existing** labels (validated in step 5) — never a new one.

@@ -77,51 +77,58 @@ raw REST endpoint via `glab api`. This is one uniform code path for all four typ
 - `group/project` → `group%2Fproject`
 - `group/subgroup/project` → `group%2Fsubgroup%2Fproject`
 
-### `-f` vs `-F` (smart vs raw string)
+### `-F` vs `-f` (smart vs raw string)
 
-`glab api` mirrors `gh api`:
+`glab api` mirrors `gh api` — **and the short flags are the opposite of what you might guess:**
 
-- **`-f, --field`** is the **smart** form: literal `true` / `false` / `null` and integers are
-  converted to the matching JSON types, and a value starting with `@` is read from that **file**. Use
-  it for the description (`description=@file`), booleans (`confidential`), numeric ids
-  (`milestone_id`, `epic_id`), and array fields (`assignee_ids[]`).
-- **`-F, --raw-field`** sends an **always-literal string** (no parsing). Use it for free text that
+- **`-F, --field`** is the **smart** form: literal `true` / `false` / `null` and integers are
+  converted to the matching JSON types, and a value starting with `@` is read from that **file**
+  (`@-` reads **stdin**). Use it for booleans (`confidential`), numeric ids (`milestone_id`,
+  `epic_id`), array fields (`assignee_ids[]`), and the description via stdin (`description=@-`).
+- **`-f, --raw-field`** sends an **always-literal string** (no parsing). Use it for free text that
   must not be coerced — `title`, `issue_type`, `labels`.
 
-> Rule of thumb: **booleans / numbers / `@file` → `-f` (smart); arbitrary strings → `-F` (raw).**
+> Rule of thumb: **booleans / numbers / `@file` / `@-` -> `-F` (smart); arbitrary strings -> `-f` (raw).**
 > Providing any field flag makes `glab api` use `POST` automatically; the examples pass
 > `--method POST` explicitly for clarity.
+>
+> **Snap caveat:** when `glab` is a confined snap, `-F description=@/path/to/file` fails with
+> "permission denied" for files under hidden or arbitrary paths. Feed the body on **stdin** instead —
+> `-F description=@-  < body.md` — so the unconfined shell opens the file.
 
-### Pass the description from a file
+### Pass the description from a file (via stdin)
 
 The description is multi-line Markdown with quotes, backticks, and HTML. Don't try to inline it as a
-shell argument — write it to a temp file and read it in:
+shell argument — write it to a temp file and feed it on **stdin** with `-F description=@-` (stdin is
+snap-safe; see the caveat above):
 
 ```
 # write the assembled markdown to e.g. a mktemp file body.md, then:
 glab api --method POST "projects/group%2Fproject/issues" \
-  -F title="User stays logged in across browser sessions" \
-  -f description=@/path/to/body.md \
-  -F issue_type=issue
+  -f title="User stays logged in across browser sessions" \
+  -F description=@- \
+  -f issue_type=issue \
+  < body.md
 ```
 
 ### Full create call (all optional fields shown)
 
 ```
 glab api --method POST "projects/<url-encoded-path>/issues" \
-  -F title="<title>" \
-  -f description=@<body.md> \
-  -F issue_type=<issue|incident|task|test_case> \
-  -F labels="<existing,labels>" \
-  -f confidential=true \
-  -f milestone_id=<id> \
-  -f epic_id=<id> \
-  -f "assignee_ids[]=<id>"
+  -f title="<title>" \
+  -F description=@- \
+  -f issue_type=<issue|incident|task|test_case> \
+  -f labels="<existing,labels>" \
+  -F confidential=true \
+  -F milestone_id=<id> \
+  -F epic_id=<id> \
+  -F "assignee_ids[]=<id>" \
+  < body.md
 ```
 
 Omit any optional flag the user didn't choose. Send **only existing** labels (validated in SKILL.md
-step 5). Note the flag choice: free-text strings (`title`, `issue_type`, `labels`) use `-F`;
-the `@file` description, booleans, and numeric ids use `-f`.
+step 5). Note the flag choice: free-text strings (`title`, `issue_type`, `labels`) use `-f` (raw);
+the description (fed on stdin via `@-`), booleans, and numeric ids use `-F` (smart).
 
 ### Resolving ids
 
