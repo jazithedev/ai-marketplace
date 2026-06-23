@@ -1,7 +1,7 @@
 {
   "name": "code-review",
   "description": "Multi-agent code review skill that simulates JaziTheDev's review style — PR discipline (scope and size), bugs and design smells, project-rules compliance, historical context, code documentation, and tactical/strategic DDD. Posts findings as inline GitHub review comments.",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "author": {
     "name": "Krzysztof Trzos",
     "email": "k.trzos@jazi.pl"

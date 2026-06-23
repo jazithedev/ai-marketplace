@@ -1,6 +1,6 @@
 # Jazi's Code Review Patterns
 
-Personal review checklist derived from analyzing 1,132 PR reviews by JaziTheDev (Krzysztof Trzos) on BrightLocal/Tools (May 2024 – April 2026). These patterns reflect real, recurring feedback that consistently appeared across those reviews.
+Personal review checklist derived from analyzing 1,132 PR reviews. These patterns reflect real, recurring feedback that consistently appeared across those reviews.
 
 ## Table of Contents
 
