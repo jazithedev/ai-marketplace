@@ -1,0 +1,13 @@
+{
+  "name": "create-gitlab-work-item",
+  "description": "Turn a short brief into a well-structured GitLab work item (Issue, Incident, Task, or Test case) — Context, Expected Result, GIVEN/WHEN/THEN acceptance criteria, and optional QA Notes and Implementation Plan as collapsible details. Creates via the glab CLI; repo-aware, remembers your fallback project, and previews the full work item before creating it.",
+  "version": "1.0.1",
+  "author": {
+    "name": "Krzysztof Trzos",
+    "email": "k.trzos@jazi.pl"
+  },
+  "license": "MIT",
+  "keywords": ["gitlab", "work-item", "issue", "incident", "glab", "issue-tracking", "productivity"],
+  "repository": "https://github.com/jazithedev/ai-marketplace",
+  "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/create-gitlab-work-item"
+}
