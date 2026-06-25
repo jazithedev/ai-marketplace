@@ -91,7 +91,7 @@
     {
       "name": "create-gitlab-work-item",
       "description": "Turn a short brief into a well-structured GitLab work item (Issue, Incident, Task, or Test case) — Context, Expected Result, GIVEN/WHEN/THEN acceptance criteria, and optional QA Notes and Implementation Plan as collapsible details. Creates via the glab CLI; repo-aware, remembers your fallback project, and previews the full work item before creating it.",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "author": {
         "name": "Krzysztof Trzos"
       },

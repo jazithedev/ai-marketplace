@@ -166,8 +166,10 @@ refactor/infra change). When in doubt, leave them out — the body carries the d
 - **Assignee** (optional). The REST API wants numeric `assignee_ids`, not usernames. Resolve a
   username to an id with `glab api "users?username=<name>"` (take `id`); for self-assign, use
   `glab api user`. Default to **unassigned** if the user doesn't ask.
-- **Confidential** (optional, **default off**). Offer it for security/internal work items; when the
-  user wants it, send `confidential=true`.
+- **Confidential** (**default on**). Work items are created **confidential by default** — always send
+  `confidential=true` unless the user explicitly asks for a public/non-confidential work item. State
+  in the preview that it will be confidential so the user can opt out; only when they do, drop the flag
+  (send `confidential=false` or omit it).
 - **Milestone** is **not set by default** (the work item lands in the backlog). Only set one if the
   user explicitly asks — then resolve the title to a numeric `milestone_id` via
   `glab api "projects/<path>/milestones?title=<title>"` and, if none matches, say so rather than
@@ -195,8 +197,8 @@ glab api --method POST "projects/<url-encoded-path>/issues" \
   -f title="<title>" \
   -F description=@- \
   -f issue_type=<issue|incident|task|test_case> \
+  -F confidential=true \
   [-f labels="<existing,labels>"] \
-  [-F confidential=true] \
   [-F milestone_id=<id>] \
   [-F epic_id=<id>] \
   [-F "assignee_ids[]=<id>"] \
@@ -204,7 +206,9 @@ glab api --method POST "projects/<url-encoded-path>/issues" \
 ```
 
 - Pass **only existing** labels (validated in step 5) — never a new one.
-- Omit any optional flag the user didn't choose.
+- **Always pass `confidential=true`** — work items default to confidential. Drop the flag (or send
+  `confidential=false`) **only** when the user explicitly asked for a public/non-confidential one.
+- Omit any other optional flag the user didn't choose.
 - **No** weight, due date, priority, or default assignee — leave the work item unassigned and in the
   backlog unless the user asked otherwise.
 - If `test_case` creation is rejected for tier reasons, tell the user and offer to retry as `Issue`.
