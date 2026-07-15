@@ -1,7 +1,7 @@
 {
   "name": "pr-review-list",
   "description": "List the GitHub pull requests awaiting your code review for a repo and team — deterministic triage that catches teammate-reviewed PRs and drops other-team request noise.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": {
     "name": "Krzysztof Trzos",
     "email": "k.trzos@jazi.pl"
