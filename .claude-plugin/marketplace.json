@@ -7,7 +7,7 @@
   },
   "metadata": {
     "description": "Community-driven collection of Claude Code skills, agents, and plugins for software development workflows",
-    "version": "1.6.1"
+    "version": "1.6.2"
   },
   "plugins": [
     {
@@ -104,7 +104,7 @@
     {
       "name": "pr-review-list",
       "description": "List the GitHub pull requests awaiting your code review for a repo and team — deterministic triage that catches teammate-reviewed PRs and drops other-team request noise.",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "author": { "name": "Krzysztof Trzos" },
       "source": "./plugins/pr-review-list",
       "category": "productivity",
