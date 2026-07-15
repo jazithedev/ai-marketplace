@@ -312,10 +312,13 @@ def run(args, now: datetime) -> str:
 
     numbers = discover_candidates(repo, org, args.team, members, me, args.include_closed)
 
-    hidden = {"out-of-scope team": 0, "no in-scope signal": 0}
+    hidden = {"authored by you": 0, "out-of-scope team": 0, "no in-scope signal": 0}
     in_scope_prs: list[dict] = []
     for number in sorted(numbers):
         pr = enrich(repo, number)
+        if (pr.get("author") or {}).get("login") == me:
+            hidden["authored by you"] += 1  # never review your own PR
+            continue
         if in_scope(pr, include_teams, members, me):
             in_scope_prs.append(pr)
         else:
