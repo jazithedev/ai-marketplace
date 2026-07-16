@@ -4,7 +4,7 @@ Turn a one- or two-sentence brief into a properly structured Jira ticket. You de
 
 ## Features
 
-- **Standard template** — `Context`, `Expected Result`, and `GIVEN/WHEN/THEN` acceptance criteria every time, plus bug-only `Data` / `Steps to Reproduce` / `Actual Result` sections
+- **Standard template** — `Context`, `Expected Result`, and numbered, full-sentence acceptance criteria every time, plus bug-only `Data` / `Steps to Reproduce` / `Actual Result` sections
 - **Optional expanders** — `QA Notes` (endpoints and CLI commands) and `Implementation Plan` render as collapsed expanders via ADF, keeping the ticket scannable
 - **Site- and project-agnostic** — the Jira site, project, and board come from your saved preferences or a quick discovery step, never hard-coded
 - **Remembers your preferences** — recalls your usual site and board across sessions and announces the default so you can override it

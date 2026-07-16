@@ -77,8 +77,8 @@
     },
     {
       "name": "create-jira-ticket",
-      "description": "Turn a short brief into a well-structured Jira ticket — Context, Expected Result, GIVEN/WHEN/THEN acceptance criteria, and optional QA Notes and Implementation Plan expanders. Site- and project-agnostic; remembers your filing preferences and previews the full ticket before creating it.",
-      "version": "1.0.0",
+      "description": "Turn a short brief into a well-structured Jira ticket — Context, Expected Result, numbered full-sentence acceptance criteria, and optional QA Notes and Implementation Plan expanders. Site- and project-agnostic; remembers your filing preferences and previews the full ticket before creating it.",
+      "version": "1.1.0",
       "author": {
         "name": "Krzysztof Trzos"
       },

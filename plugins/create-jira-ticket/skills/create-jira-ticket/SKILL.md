@@ -2,7 +2,7 @@
 name: create-jira-ticket
 description: >-
   Create a well-structured Jira ticket from a short brief, following a standard ticket template
-  (Context, Expected Result, Acceptance Criteria in GIVEN/WHEN/THEN, and an optional collapsed
+  (Context, Expected Result, numbered full-sentence Acceptance Criteria, and an optional collapsed
   Implementation Plan; plus Data / Steps to Reproduce / Actual Result for bugs). Use whenever the
   user wants to create, raise, open, file, or log a Jira ticket / issue / task / bug / story — e.g.
   "create a Jira ticket for…", "raise a ticket about…", "make a bug for…", "log a story for…",
@@ -79,16 +79,18 @@ Read `references/ticket-template.md` and assemble the **Description** body:
 - `## Data`, `## Steps to Reproduce`, `## Actual Result` — **only for Bugs**. Drop any Data line that
   doesn't apply rather than leaving `<…>` placeholders.
 - `# Expected Result` — always.
-- `# Acceptance Criteria` — always; draft GIVEN/WHEN/THEN criteria inferred from the brief. The user
-  will refine them in the preview, so propose concrete criteria rather than vague ones. Format each
-  criterion as a single bullet with **bold** `GIVEN` / `WHEN` / `THEN`, each on its own line within
-  that bullet (line breaks inside the item, not three separate bullets) — see the template and
+- `# Acceptance Criteria` — always; draft a **numbered list** of criteria inferred from the brief.
+  The user will refine them in the preview, so propose concrete criteria rather than vague ones.
+  Each criterion is one numbered item holding **one full, coherent sentence** that states the
+  behaviour to verify. Fold a Given/When/Then ordering into the sentence when it reads naturally
+  ("Given …, when …, then …"); when it doesn't, write a plain sentence instead — a readable sentence
+  always takes precedence over the GIVEN/WHEN/THEN format. See the template and
   `references/creating-with-an-expander.md` for the exact markdown and ADF.
   - **Sentry follow-up:** if the ticket references any Sentry issue(s) (e.g. a link in the Data
     section or mentioned in the brief), add a criterion that the linked Sentry issue is **Resolved**
-    once the work is done — e.g. *GIVEN the linked Sentry issue / WHEN this ticket is delivered /
-    THEN the Sentry issue is marked Resolved and stops recurring.* Reference the specific issue
-    (ID/link) when one is known. Skip this criterion when no Sentry issue is involved.
+    once the work is done — e.g. *Once this ticket is delivered, the linked Sentry issue is marked
+    Resolved and stops recurring.* Reference the specific issue (ID/link) when one is known. Skip
+    this criterion when no Sentry issue is involved.
 - `# QA Notes` — **only if the ticket involves specific API endpoints or console/CLI commands.**
   Goes directly after Acceptance Criteria. List the concrete things that make a QA's testing easier:
   endpoint URLs/paths (with method), and console command names **with their parameters/flags spelled
