@@ -43,32 +43,33 @@ observable outcome in plain language and keep technicals to a minimum; format an
 inline code.
 
 ### `# Acceptance Criteria`
-Always present. A list of criteria in **GIVEN… WHEN… THEN…** format. Draft these from the brief,
-then let the user refine them in the preview. Prefer several small, independently checkable
-criteria over one big one.
+Always present. A **numbered list** of criteria (`1.`, `2.`, `3.` — never plain bullets), so
+reviewers and QA can reference each one unambiguously ("AC 3"). Draft these from the brief, then
+let the user refine them in the preview. Prefer several small, independently checkable criteria
+over one big one.
 
-**Formatting:** within each bullet, put `GIVEN`, `WHEN`, and `THEN` in **bold** and each on its own
-line (a line break inside the same list item, not three separate bullets). This gives every
-criterion a consistent, scannable shape. Example:
+**Shape of a criterion:** each numbered item holds **one full, coherent sentence** that states the
+behaviour to verify — no bold keywords, no line breaks inside the item, no telegram-style
+fragments. Fold a Given/When/Then ordering into the sentence when it reads naturally
+("Given …, when …, then …"); when it doesn't, write a plain sentence instead — a readable sentence
+always takes precedence over the GIVEN/WHEN/THEN format. Example:
 
 ```
-* **GIVEN** an account with no saved records
-  **WHEN** the user opens the list view
-  **THEN** an empty-state message is shown instead of a loading spinner
+1. Given an account with no saved records, when the user opens the list view, an empty-state
+   message is shown instead of a loading spinner.
+2. The empty-state message links to the "create record" form.
 ```
 
-In markdown, end the GIVEN and WHEN lines with two trailing spaces to force the line break within
-the bullet. In ADF, use `hardBreak` nodes between the lines and a `strong` mark on each keyword —
-see `creating-with-an-expander.md`.
+In markdown this is an ordinary ordered list. In ADF it is an `orderedList` node with one
+full-sentence paragraph per `listItem` — see `creating-with-an-expander.md`.
 
 **Sentry follow-up criterion (conditional):** if the ticket references any Sentry issue(s) — a link
 in the bug `## Data` section, or mentioned in the brief — add a criterion that the issue must be
 **Resolved** once the work is done. Name the specific issue when known. Example:
 
 ```
-* **GIVEN** the linked Sentry issue (`PROJECT-BACKEND-1A2B`)
-  **WHEN** this ticket is delivered
-  **THEN** the Sentry issue is marked Resolved and stops recurring
+3. Once this ticket is delivered, the linked Sentry issue (`PROJECT-BACKEND-1A2B`) is marked
+   Resolved and stops recurring.
 ```
 
 Omit this when no Sentry issue is connected to the ticket.
@@ -137,12 +138,8 @@ apply it everywhere for consistency — including inside the Implementation Plan
 
 # Acceptance Criteria
 
-* **GIVEN** …
-  **WHEN** …
-  **THEN** …
-* **GIVEN** …
-  **WHEN** …
-  **THEN** …
+1. <one full-sentence criterion>
+2. <one full-sentence criterion>
 
 # QA Notes                    ← only if there are API endpoints / console commands; keep this heading…
 <endpoints (method + path) and/or command names with params, inside a collapsed /expand expander beneath the heading>
@@ -178,9 +175,8 @@ apply it everywhere for consistency — including inside the Implementation Plan
 
 # Acceptance Criteria
 
-* **GIVEN** …
-  **WHEN** …
-  **THEN** …
+1. <one full-sentence criterion>
+2. <one full-sentence criterion>
 
 # QA Notes                    ← only if there are API endpoints / console commands; keep this heading…
 <endpoints (method + path) and/or command names with params, inside a collapsed /expand expander beneath the heading>

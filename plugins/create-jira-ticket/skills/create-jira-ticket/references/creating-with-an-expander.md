@@ -57,20 +57,18 @@ A plain bullet list (use for Data, etc.):
 ]}
 ```
 
-An **Acceptance Criteria** bullet — each keyword bold (`strong` mark) and on its own line via
-`hardBreak`, all inside one list item:
+The **Acceptance Criteria** list — an `orderedList` so every criterion is numbered, with one
+full-sentence criterion per list item:
 ```json
-{ "type": "bulletList", "content": [
+{ "type": "orderedList", "attrs": { "order": 1 }, "content": [
   { "type": "listItem", "content": [
     { "type": "paragraph", "content": [
-      { "type": "text", "text": "GIVEN", "marks": [{ "type": "strong" }] },
-      { "type": "text", "text": " an account with no saved records" },
-      { "type": "hardBreak" },
-      { "type": "text", "text": "WHEN", "marks": [{ "type": "strong" }] },
-      { "type": "text", "text": " the user opens the list view" },
-      { "type": "hardBreak" },
-      { "type": "text", "text": "THEN", "marks": [{ "type": "strong" }] },
-      { "type": "text", "text": " an empty-state message is shown" }
+      { "type": "text", "text": "Given an account with no saved records, when the user opens the list view, an empty-state message is shown instead of a loading spinner." }
+    ]}
+  ]},
+  { "type": "listItem", "content": [
+    { "type": "paragraph", "content": [
+      { "type": "text", "text": "The empty-state message links to the \"create record\" form." }
     ]}
   ]}
 ]}
@@ -110,17 +108,14 @@ a **heading node followed by an expand node**:
     { "type": "paragraph", "content": [{ "type": "text", "text": "What success looks like." }] },
 
     { "type": "heading", "attrs": { "level": 1 }, "content": [{ "type": "text", "text": "Acceptance Criteria" }] },
-    { "type": "bulletList", "content": [
+    { "type": "orderedList", "attrs": { "order": 1 }, "content": [
       { "type": "listItem", "content": [
         { "type": "paragraph", "content": [
-          { "type": "text", "text": "GIVEN", "marks": [{ "type": "strong" }] },
-          { "type": "text", "text": " an account with no saved records" },
-          { "type": "hardBreak" },
-          { "type": "text", "text": "WHEN", "marks": [{ "type": "strong" }] },
-          { "type": "text", "text": " the user opens the list view" },
-          { "type": "hardBreak" },
-          { "type": "text", "text": "THEN", "marks": [{ "type": "strong" }] },
-          { "type": "text", "text": " an empty-state message is shown" }
+          { "type": "text", "text": "Given an account with no saved records, when the user opens the list view, an empty-state message is shown instead of a loading spinner." }
+        ] }]},
+      { "type": "listItem", "content": [
+        { "type": "paragraph", "content": [
+          { "type": "text", "text": "The empty-state message links to the \"create record\" form." }
         ] }]}
     ]},
 
