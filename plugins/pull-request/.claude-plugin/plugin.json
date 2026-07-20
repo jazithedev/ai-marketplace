@@ -1,0 +1,13 @@
+{
+  "name": "pull-request",
+  "description": "Create draft pull requests from the commits on the current branch — a single PR, or a stacked chain of child PRs under a collective branch. Provider-agnostic: full GitHub and GitLab support, honest fallback elsewhere; always previews the full PR plan before creating anything.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Krzysztof Trzos",
+    "email": "k.trzos@jazi.pl"
+  },
+  "license": "MIT",
+  "keywords": ["git", "pull-request", "merge-request", "stacked-prs", "github", "gitlab", "workflow"],
+  "repository": "https://github.com/jazithedev/ai-marketplace",
+  "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/pull-request"
+}

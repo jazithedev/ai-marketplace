@@ -7,7 +7,7 @@
   },
   "metadata": {
     "description": "Community-driven collection of Claude Code skills, agents, and plugins for software development workflows",
-    "version": "1.6.2"
+    "version": "1.7.0"
   },
   "plugins": [
     {
@@ -100,6 +100,19 @@
       "keywords": ["gitlab", "work-item", "issue", "incident", "glab", "issue-tracking", "productivity"],
       "license": "MIT",
       "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/create-gitlab-work-item"
+    },
+    {
+      "name": "pull-request",
+      "description": "Create draft pull requests from the commits on the current branch — a single PR, or a stacked chain of child PRs under a collective branch. Provider-agnostic: full GitHub and GitLab support, honest fallback elsewhere; always previews the full PR plan before creating anything.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Krzysztof Trzos"
+      },
+      "source": "./plugins/pull-request",
+      "category": "productivity",
+      "keywords": ["git", "pull-request", "merge-request", "stacked-prs", "github", "gitlab", "workflow"],
+      "license": "MIT",
+      "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/pull-request"
     },
     {
       "name": "pr-review-list",
