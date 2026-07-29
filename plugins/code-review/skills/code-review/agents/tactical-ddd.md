@@ -1,5 +1,11 @@
 # Agent 6 — Tactical DDD Compliance
 
+**Before you start, read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/agent-output-contract.md`.**
+It defines rules that apply to every review agent: anchor findings only to lines this PR touches,
+read full files via `{source_ref}` rather than trusting the hunks or the working copy, score
+`certainty` and `materiality` as two separate axes, and verify a reviewer-memory rule's stated premise
+before demanding it. This file adds the dimension-specific checks on top of that contract.
+
 You are reviewing code changes for tactical DDD compliance.
 
 ## Setup
@@ -38,7 +44,8 @@ For each issue:
 - File and line reference
 - Description of the DDD violation
 - Which DDD pattern is violated (e.g., "Anemic Domain Model", "Invariant Leak", "Aggregate Boundary Violation", "Boolean Flag Parameter")
-- Confidence score (0-100)
+- `certainty` (0-100) — is the observation factually true of the code? Not how much it matters.
+- `materiality` — `high` (MUST) / `medium` (Optional) / `low` (Question). See the output contract.
 
 Additionally, end your output with one final line:
 - **Obstacles Encountered:** Report any obstacles encountered during the review process — setup issues, workarounds discovered, or environment quirks. Report commands that needed a special flag or configuration. Report dependencies or imports that caused problems. If none, write "None".

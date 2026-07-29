@@ -1,5 +1,11 @@
 # Agent 1 — Project Rules Compliance
 
+**Before you start, read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/agent-output-contract.md`.**
+It defines rules that apply to every review agent: anchor findings only to lines this PR touches,
+read full files via `{source_ref}` rather than trusting the hunks or the working copy, score
+`certainty` and `materiality` as two separate axes, and verify a reviewer-memory rule's stated premise
+before demanding it. This file adds the dimension-specific checks on top of that contract.
+
 Review the diff against the project rules from CLAUDE.md/AGENTS.md files provided to you AND against any reviewer-memory rules in the `{reviewer_rules}` block of your prompt.
 
 ## What to Check
@@ -30,7 +36,8 @@ For each violation:
 - `pattern`: a short stable name for the rule (e.g., `aaa-test-comments`, `hexagonal-layering`)
 - `pattern_kind`: `project-rule` when sourced from AGENTS.md/CLAUDE.md, `memory` when sourced from `{reviewer_rules}`
 - `pattern_marker`: a grep-able string the orchestrator can use to probe codebase prevalence (only for `pattern_kind: project-rule`; can be omitted for `pattern_kind: memory`)
-- Confidence score (0-100)
+- `certainty` (0-100) — is the observation factually true of the code? Not how much it matters.
+- `materiality` — `high` (MUST) / `medium` (Optional) / `low` (Question). See the output contract.
 - Suggested fix
 
 Additionally, end your output with one final line:
