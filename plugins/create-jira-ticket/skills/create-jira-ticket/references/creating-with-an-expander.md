@@ -139,6 +139,27 @@ a **heading node followed by an expand node**:
 endpoints/commands to test through, and place it after Acceptance Criteria and before any
 Implementation Plan. Omit either heading entirely when its content doesn't apply.
 
+## Updating a description later (read this before you edit)
+
+The description is a **single replace-only field**. There is no partial update: whatever you send
+becomes the entire description, and anything you leave out is deleted with no error and a `200`
+response. Two consequences, both of which cost real content if ignored:
+
+**Re-send everything, every time.** An edit that only means "reword one criterion" still requires the
+full ADF document — every heading, both `expand` nodes, and every `link` and `code` mark. Rebuild from
+the version you just fetched rather than retyping from memory; a dropped `expand` silently flattens a
+section, and a dropped `link` mark turns a ticket reference back into plain text.
+
+**Fetch immediately before writing.** Never build the new document from a copy you read earlier in the
+conversation. If anyone touched the ticket in between — including the user, by hand, in the UI —
+writing a stale copy reverts their edit and reports success. Re-read, apply your change to *that*, then
+write.
+
+Note that the read path may return the description as **markdown even when you request ADF**, which
+flattens expanders in the response. That makes the API an unreliable way to confirm your expanders
+survived: it can look flattened when it is fine. Trust the structure you sent, keep sending complete
+documents, and eyeball the ticket in the browser if you need certainty.
+
 ## If ADF is rejected
 
 If the MCP tool rejects the ADF payload, fall back gracefully: create the ticket with a
