@@ -1,27 +1,34 @@
 ---
 name: create-jira-ticket
 description: >-
-  Create a well-structured Jira ticket from a short brief, following a standard ticket template
-  (Context, Expected Result, numbered full-sentence Acceptance Criteria, and an optional collapsed
-  Implementation Plan; plus Data / Steps to Reproduce / Actual Result for bugs). Use whenever the
-  user wants to create, raise, open, file, or log a Jira ticket / issue / task / bug / story — e.g.
-  "create a Jira ticket for…", "raise a ticket about…", "make a bug for…", "log a story for…",
-  "/create-jira-ticket". Also offer to use it proactively when the user describes a bug, task, or
-  piece of work that clearly belongs in a ticket, even if they don't explicitly say "Jira". The
-  skill remembers which Jira site and board/project the user usually files to and reuses them,
-  drafts the ticket content for the user to approve, and always previews the full ticket before
-  creating it. Because these tickets are read by Product Managers, it keeps code-level technicals
-  (class names, namespaces, types) out of the Context and Expected Result sections as far as
-  possible — favouring the Implementation Plan for technical detail — and formats any technical
-  tokens as inline code.
+  Create or update a Jira ticket following a standard template (Context, Expected Result,
+  numbered full-sentence Acceptance Criteria, and optional Action Points, QA Notes and
+  Implementation Plan sections; plus Data / Steps to Reproduce / Actual Result for bugs). Use
+  whenever the user wants to create, raise, open, file, or log a Jira ticket / issue / task / bug /
+  story — e.g. "create a Jira ticket for…", "raise a ticket about…", "make a bug for…", "log a
+  story for…", "/create-jira-ticket" — and equally when they want to change a ticket that already
+  exists: "update the ticket", "revise the description", "add an acceptance criterion to ABC-123",
+  "reword the ACs", "fold this answer into the ticket", "these questions got answered, update the
+  tickets". Also offer to use it proactively when the user describes a bug, task, or piece of work
+  that clearly belongs in a ticket, even if they don't explicitly say "Jira". The skill remembers
+  which Jira site and board/project the user usually files to and reuses them, drafts the content
+  for the user to approve, and previews before writing to the tracker. Because these tickets are
+  read by Product Managers, it keeps code-level technicals (class names, namespaces, types) out of
+  the Context, Expected Result and Acceptance Criteria sections — favouring the Implementation Plan
+  for technical detail — and formats any technical tokens as inline code.
 ---
 
-# Create a Jira ticket
+# Create or update a Jira ticket
 
 Turn a short brief into a properly structured Jira ticket, using the standard template in
 `references/ticket-template.md`. You draft the content; the user approves; you create it. The goal is
 that the user types a sentence or two and gets back a clean, reviewable ticket without having to
 remember the template structure or which project to file to.
+
+The same template governs **updates**. Tickets change — an upstream team answers a question, a
+reviewer trims the ACs, scope shifts — and an update should leave the ticket as well-formed as a
+fresh one. See "Updating an existing ticket" below, and read it *before* editing anything: the
+description field is replace-only, so a careless update destroys content silently.
 
 The skill is **project- and site-agnostic** — the Jira site, project, and board all come from the
 user's saved preferences or from a quick discovery step, never from anything hard-coded.
@@ -63,7 +70,12 @@ A "board" in this workflow just resolves to a **project**; the ticket is created
 
 Ask the user (or infer from what they already said):
 
-- **Issue type** — `Task`, `Bug`, or `Story`. This decides whether the bug-only subsections appear.
+- **Issue type** — `Task`, `Bug`, or `Story` (use whatever the project actually calls them; some
+  projects name the story type `User Story`). This decides whether the bug-only subsections appear.
+  When choosing between a story and a task, apply the **observable-user-outcome test**: if delivering
+  the ticket changes something a user can see or do, it's a story; if it only moves the system
+  towards that (wiring, plumbing, an event nobody consumes yet), it's a task. A ticket whose value
+  only materialises once *another* team consumes it is a task, not a story.
 - **The brief** — a sentence or two on what the ticket is about. You'll expand this into the
   template; ask only the follow-up questions you genuinely need (for a bug: the relevant IDs and
   reproduction steps; for a task: the desired outcome).
@@ -86,11 +98,25 @@ Read `references/ticket-template.md` and assemble the **Description** body:
   ("Given …, when …, then …"); when it doesn't, write a plain sentence instead — a readable sentence
   always takes precedence over the GIVEN/WHEN/THEN format. See the template and
   `references/creating-with-an-expander.md` for the exact markdown and ADF.
+  - **A criterion states observable behaviour, in plain language.** Implementation decisions —
+    naming conventions, types and nullability, internal payload structure — are not acceptance
+    criteria and belong in the Implementation Plan. The template's "What is not an acceptance
+    criterion" section lists the recurring offenders; read it before drafting.
   - **Sentry follow-up:** if the ticket references any Sentry issue(s) (e.g. a link in the Data
     section or mentioned in the brief), add a criterion that the linked Sentry issue is **Resolved**
     once the work is done — e.g. *Once this ticket is delivered, the linked Sentry issue is marked
     Resolved and stops recurring.* Reference the specific issue (ID/link) when one is known. Skip
     this criterion when no Sentry issue is involved.
+  - **Published-documentation follow-up:** if the ticket changes a documented or published
+    interface (an API payload, an endpoint, a CLI contract), add a criterion that the published
+    documentation is updated to reflect the endpoints or commands named in QA Notes. Name the
+    project's actual docs location (Stoplight, Swagger, a docs site, a README) rather than assuming
+    one, and delegate the specifics to QA Notes instead of restating every field, so the criterion
+    doesn't rot when the field list changes. Skip it when nothing published changes.
+- `# Action Points` — **only if the ticket cannot be fully specified yet.** A visible section (not an
+  expander) holding the numbered questions that must be answered before the work is buildable —
+  typically things only another team can confirm. See the template for what qualifies and how they
+  are retired.
 - `# QA Notes` — **only if the ticket involves specific API endpoints or console/CLI commands.**
   Goes directly after Acceptance Criteria. List the concrete things that make a QA's testing easier:
   endpoint URLs/paths (with method), and console command names **with their parameters/flags spelled
@@ -176,6 +202,56 @@ Body format:
 - Update the remembered preferences: keep the resolved site, set the default board (if it changed),
   and push this board to the top of the recents list.
 
+## Updating an existing ticket
+
+Use the same template and the same standards as a fresh ticket — an update should leave the ticket
+as well-formed as it started. Four rules, in this order:
+
+### 1. Re-fetch immediately before writing
+
+Never build an update from a copy of the description you read earlier in the conversation. Fetch the
+issue again right before you write. The description field is **replace-only**: if someone edited the
+ticket in the meantime — including the user, by hand, in the UI — writing a stale copy silently
+reverts their work and the API returns success. This is the single easiest way to do real damage with
+this skill.
+
+### 2. Re-send the complete description
+
+There is no partial update of a description. Whatever you send *becomes* the description. Re-send
+every heading, every expander, and every link and inline-code mark. Anything you omit is deleted, with
+no error. See `references/creating-with-an-expander.md`.
+
+### 3. Preview the change — as a diff
+
+Show what changes, not the whole ticket again: "AC 3 reworded, AC 5 removed, Implementation Plan gains
+two bullets, Action Point 1 resolved and dropped". A re-print of sixty lines isn't reviewable.
+
+**When approval is required:** if *you* are proposing the update (you spotted a discrepancy, or new
+information arrived), get explicit approval before writing. If the user has explicitly told you to
+make the change — "update the tickets", "reword AC 3", "drop that criterion" — just do it and report
+what you changed afterwards. Don't make someone approve an edit they just ordered.
+
+### 4. Tell the owner, for material changes
+
+If the ticket is **assigned**, or **in an active sprint**, and the change is material — reworked ACs,
+changed scope, a new blocking question, a corrected contract — add a comment saying what changed and
+why, and `@`-mention the assignee. Changing the spec under someone mid-sprint without telling them
+wastes their work.
+
+"Material" excludes typo fixes, formatting, and adding a link. If every trivial edit generates a
+comment, the rule gets ignored wholesale. When a ticket is in a sprint but unassigned, still comment —
+just note there was nobody to notify.
+
+Keep such comments short: a one-line header of what happened, then the detail in a collapsed
+expander, so the ticket's comment thread stays scannable.
+
+### Retiring Action Points
+
+When an Action Point gets answered, don't leave it sitting there answered-in-a-comment. Fold the
+answer into the ACs, QA Notes or Implementation Plan where it now belongs, then delete the Action
+Point. If every Action Point is resolved, remove the section entirely rather than leaving an empty
+heading. Record where the answer came from (see the template's provenance note).
+
 ## Remembering site and board
 
 Persist the user's filing preferences using your memory system so they survive across sessions.
@@ -197,8 +273,9 @@ preference exists when you can't find one.
 
 ## Notes
 
-- This is the **only** thing this skill does — create a ticket. It does not transition, comment on,
-  link, or edit existing tickets. If the user asks for those, do them directly with the Jira tools;
-  don't shoehorn them in here.
+- This skill **creates and updates** tickets. It does not transition them, manage issue links, or
+  work the board. If the user asks for those, do them directly with the Jira tools; don't shoehorn
+  them in here. It comments only in service of an update it just made (see "Tell the owner"), never
+  as a general-purpose commenting tool.
 - If the Atlassian MCP tools aren't connected, say so plainly and stop — don't fabricate a ticket
   key or URL.
