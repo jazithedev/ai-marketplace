@@ -60,6 +60,32 @@ every criterion a consistent, scannable shape. Example:
 
 See `gitlab-markdown.md` for why `<br>` is used (GitLab renders it reliably inside a list item).
 
+**What is not an acceptance criterion.** A criterion is something a reviewer or QA can verify against
+the running system, written in plain language. These four keep appearing and none of them belong —
+move each to the `# Implementation Plan`, which is where an implementer will look for them anyway:
+
+| Not a criterion | Why | Where it goes |
+|---|---|---|
+| "Field names use camelCase" | A naming convention, not a behaviour | Implementation Plan |
+| "The field is non-nullable, mirroring upstream" | A typing decision | Implementation Plan |
+| "The summaries are grouped under a single section" | An internal structure choice | Implementation Plan |
+| "The value uses the same scale as the other rates" *(while the scale is still an open question)* | Pre-commits the team to a decision nobody has made | Action Points, until answered |
+
+That last one is the subtle one. A criterion that quietly assumes the outcome of an unresolved question
+turns into a silent commitment: someone implements to satisfy it and, in doing so, decides something
+that was supposed to be decided elsewhere. If a question is open, it belongs in `# Action Points`, not
+smuggled into a criterion.
+
+**Avoid type vocabulary.** Say what a consumer observes, not how it is represented. "The narrative
+section is `null`" becomes *"no summary content is returned"*; "those fields are `null` for unmatched
+rows" becomes *"no directory details are returned for that row"*. The precise representation — `null`
+versus the key being absent — is real and worth writing down, but it belongs in the Implementation
+Plan for the developer, not in the sign-off contract.
+
+**Don't force a count.** Fewer criteria and less technical criteria are different goals. Keep every
+distinct verifiable behaviour as its own criterion so a reviewer can point at one unambiguously;
+merging two to shorten the list makes sign-off harder, not easier.
+
 **Sentry follow-up criterion (conditional):** if the work item references any Sentry issue(s) — a
 link in the Incident `## Data` section, or mentioned in the brief — add a criterion that the issue
 must be **Resolved** once the work is done. Name the specific issue when known. Example:
@@ -71,6 +97,34 @@ must be **Resolved** once the work is done. Name the specific issue when known. 
 ```
 
 Omit this when no Sentry issue is connected to the work item.
+
+**Published-documentation criterion (conditional):** if the work item changes a **documented or
+published** interface — an API response payload, an endpoint, a CLI contract — add a criterion that
+the published documentation is updated to reflect the endpoints or commands named in QA Notes.
+Without it you ship fields consumers can't discover, because they read the published reference rather
+than your code. Name the project's actual docs location (Stoplight, Swagger, a docs site, a README)
+rather than assuming one, and delegate the specifics to QA Notes instead of restating every field, so
+the criterion doesn't go stale when the field list changes. Omit it when nothing published changes.
+
+### `# Action Points`  (**only when the work item isn't fully specified** — after Acceptance Criteria)
+
+Include this **only** when something must be answered before the work is buildable, and the answer
+isn't ours to give — typically a contract detail owned by another team, or a product decision still
+open. A **numbered list**, and unlike QA Notes and Implementation Plan it stays **visible**: an
+unanswered blocking question that nobody sees is worse than no question at all.
+
+What qualifies: an upstream field name, type, unit or scale left ambiguous; a contradiction within the
+source material; a decision waiting on someone else. Each point should say what to confirm, with whom,
+and what changes depending on the answer — "Confirm the field name" is weak, "Confirm the field name:
+the upstream item offers both `is_branded` and `type`, and we can't map either until it's fixed" tells
+the reader why they can't just start.
+
+What does **not** qualify: work we could simply decide ourselves. If it's ours to choose, choose it in
+the Implementation Plan.
+
+**Retiring them.** Action Points are temporary. When one is answered, fold the answer into the
+Acceptance Criteria, QA Notes or Implementation Plan wherever it now belongs, then delete the point.
+When all are answered, remove the whole section rather than leaving an empty heading.
 
 ### `# QA Notes`  (**only when relevant** — directly after Acceptance Criteria)
 Include this section **only** when the work item involves specific **API endpoints** or **console/CLI
@@ -94,6 +148,25 @@ is no plan, omit the section entirely (do not emit an empty heading or block).
 When present, keep the visible `# Implementation Plan` **heading**, then place the plan body inside a
 **collapsed `<details>` block** directly beneath it — so the section is always visible but the detail
 stays folded and the work item stays readable. See `gitlab-markdown.md` for the exact markup.
+
+This is also the home for everything the Acceptance Criteria deliberately exclude — naming
+conventions, types and nullability, internal structure — plus the reasoning behind a decision, so a
+reviewer doesn't reopen it. Where a choice went against an obvious alternative, or against an existing
+pattern in the codebase, say so and say why.
+
+**Provenance (when the plan rests on someone else's answer).** If the field-level detail came from
+another team, open the plan by citing it: who confirmed it, when, a link to where, and whether it's
+settled or provisional. For example:
+
+```
+Contract confirmed by <person> in the [#channel thread of <date>](<link>) (planned, not yet
+implemented, so shapes may still move): the field is `is_branded`, a boolean, always present.
+```
+
+It earns its place twice over: a later reader can check the claim instead of trusting the work item,
+and the settled-versus-provisional note tells the implementer whether to verify against a real
+response first. When a stated premise turns out to be wrong, correct it in place and say it was wrong —
+a plan that silently contradicts an earlier version invites the same mistake again.
 
 ## Formatting technicals
 
@@ -145,6 +218,9 @@ apply it everywhere for consistency — including inside the Implementation Plan
   **WHEN** …<br>
   **THEN** …
 
+# Action Points               ← only if something must be confirmed before the work is buildable; stays VISIBLE
+1. <what to confirm, with whom, and what changes depending on the answer>
+
 # QA Notes                    ← only if there are API endpoints / console commands; keep this heading…
 <endpoints (method + path) and/or command names with params, inside a collapsed <details> beneath the heading>
 
@@ -182,6 +258,9 @@ apply it everywhere for consistency — including inside the Implementation Plan
 * **GIVEN** …<br>
   **WHEN** …<br>
   **THEN** …
+
+# Action Points               ← only if something must be confirmed before the work is buildable; stays VISIBLE
+1. <what to confirm, with whom, and what changes depending on the answer>
 
 # QA Notes                    ← only if there are API endpoints / console commands; keep this heading…
 <endpoints (method + path) and/or command names with params, inside a collapsed <details> beneath the heading>

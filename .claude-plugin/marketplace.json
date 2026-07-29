@@ -77,8 +77,8 @@
     },
     {
       "name": "create-jira-ticket",
-      "description": "Turn a short brief into a well-structured Jira ticket — Context, Expected Result, numbered full-sentence acceptance criteria, and optional QA Notes and Implementation Plan expanders. Site- and project-agnostic; remembers your filing preferences and previews the full ticket before creating it.",
-      "version": "1.1.0",
+      "description": "Create and update well-structured Jira tickets — Context, Expected Result, numbered full-sentence acceptance criteria, and optional Action Points, QA Notes and Implementation Plan sections. Keeps implementation detail out of the acceptance criteria, retires Action Points as they are answered, and updates existing tickets safely. Site- and project-agnostic; remembers your filing preferences and previews before writing.",
+      "version": "1.2.0",
       "author": {
         "name": "Krzysztof Trzos"
       },
@@ -90,8 +90,8 @@
     },
     {
       "name": "create-gitlab-work-item",
-      "description": "Turn a short brief into a well-structured GitLab work item (Issue, Incident, Task, or Test case) — Context, Expected Result, GIVEN/WHEN/THEN acceptance criteria, and optional QA Notes and Implementation Plan as collapsible details. Creates via the glab CLI; repo-aware, remembers your fallback project, and previews the full work item before creating it.",
-      "version": "1.0.2",
+      "description": "Create and update well-structured GitLab work items — Context, Expected Result, acceptance criteria, and optional Action Points, QA Notes and Implementation Plan sections. Keeps implementation detail out of the acceptance criteria, retires Action Points as they are answered, and updates existing items safely via the glab CLI.",
+      "version": "1.1.0",
       "author": {
         "name": "Krzysztof Trzos"
       },

@@ -1,19 +1,21 @@
 ---
 name: create-gitlab-work-item
 description: >-
-  Create a well-structured GitLab work item from a short brief, following a standard template
+  Create or update a well-structured GitLab work item, following a standard template
   (Context, Expected Result, Acceptance Criteria in GIVEN/WHEN/THEN, and optional collapsed QA
   Notes / Implementation Plan; plus Data / Steps to Reproduce / Actual Result for Incidents). Use
   whenever the user wants to create, raise, open, file, or log a GitLab work item / issue / ticket /
   incident / task / test case / bug / story — e.g. "create a GitLab issue for…", "raise a ticket
-  about…", "open an incident for…", "log a task for…", "/create-gitlab-work-item". Also offer to use
+  about…", "open an incident for…", "log a task for…", "/create-gitlab-work-item" — and equally when
+  they want to change one that already exists: "update the work item", "revise the description",
+  "reword the acceptance criteria", "fold this answer into the issue". Also offer to use
   it proactively when the user describes a bug, task, or piece of work that clearly belongs in a
   work item, even if they don't explicitly say "GitLab". The skill creates the work item through the
   `glab` CLI (using `glab api` so it can set the native work-item type), defaults to the current
   repo's GitLab project, remembers a fallback project, drafts the content for the user to approve,
   and always previews the full work item before creating it. Because these are read by Product
-  Managers, it keeps code-level technicals (class names, namespaces, types) out of the Context and
-  Expected Result sections as far as possible — favouring the Implementation Plan for technical
+  Managers, it keeps code-level technicals (class names, namespaces, types) out of the Context,
+  Expected Result and Acceptance Criteria sections — favouring the Implementation Plan for technical
   detail — and formats any technical tokens as inline code.
 ---
 
@@ -111,6 +113,17 @@ Markdown (see `references/gitlab-markdown.md` for the exact GFM, including `<det
     once the work is done — e.g. *GIVEN the linked Sentry issue / WHEN this work item is delivered /
     THEN the Sentry issue is marked Resolved and stops recurring.* Reference the specific issue
     (ID/link) when one is known. Skip this criterion when no Sentry issue is involved.
+  - **A criterion states observable behaviour, in plain language.** Implementation decisions —
+    naming conventions, types and nullability, internal payload structure — are not acceptance
+    criteria and belong in the Implementation Plan. See the template's "What is not an acceptance
+    criterion" section before drafting.
+  - **Published-documentation follow-up:** if the work item changes a documented or published
+    interface, add a criterion that the published documentation is updated to reflect the endpoints
+    or commands named in QA Notes. Name the project's real docs location rather than assuming one.
+- `# Action Points` — **only if the work item cannot be fully specified yet.** A visible section (not
+  a `<details>` block) holding the numbered questions that must be answered before the work is
+  buildable — typically things only another team can confirm. See the template for what qualifies and
+  how they are retired.
 - `# QA Notes` — **only if the work item involves specific API endpoints or console/CLI commands.**
   Goes directly after Acceptance Criteria. List the concrete things that make a QA's testing easier:
   endpoint URLs/paths (with method), and console command names **with their parameters/flags spelled
@@ -243,10 +256,32 @@ resolve the project from the current repo (step 2.1) or ask the user (step 2.3),
 — worst case is a question or two the first time you're used in a new place. Don't pretend a
 preference exists when you can't find one.
 
+## Updating an existing work item
+
+Use the same template and standards as a fresh one. Four rules, in order:
+
+1. **Re-fetch immediately before writing.** The description is replace-only, so an update built from a
+   copy read earlier in the conversation silently reverts anyone who edited in between — including the
+   user, by hand, in the UI — and the API reports success.
+2. **Re-send the complete description.** Whatever you send *becomes* the description. Re-send every
+   heading, every `<details>` block, and every link. Anything omitted is deleted with no error.
+3. **Preview the change as a diff** — "AC 3 reworded, AC 5 removed, Implementation Plan gains two
+   bullets, Action Point 1 resolved and dropped" — not a re-print of the whole body. Get explicit
+   approval when *you* are proposing the update; when the user has told you to make the change, just
+   make it and report what changed.
+4. **Tell the owner, for material changes.** If the work item is assigned or in an active iteration and
+   the change is material — reworked criteria, changed scope, a new blocking question — add a note
+   saying what changed and why, mentioning the assignee. Skip this for typos, formatting and links, or
+   the rule gets ignored wholesale.
+
+**Retiring Action Points:** when one is answered, fold the answer into the criteria, QA Notes or
+Implementation Plan, then delete the point; remove the section once all are answered.
+
 ## Notes
 
-- This is the **only** thing this skill does — create a work item. It does not transition, comment
-  on, link, or edit existing ones. If the user asks for those, do them directly with the `glab` tools
-  (`glab issue note`, `glab issue update`, etc.); don't shoehorn them in here.
+- This skill **creates and updates** work items. It does not transition them, manage links, or work
+  the board. If the user asks for those, do them directly with the `glab` tools (`glab issue note`,
+  etc.); don't shoehorn them in here. It comments only in service of an update it just made (see
+  "Tell the owner"), never as a general-purpose commenting tool.
 - If `glab` isn't installed or authenticated, say so plainly and stop (step 1) — don't fabricate a
   reference or URL.

@@ -147,6 +147,20 @@ The create call returns the new work item as JSON. Surface:
 - `web_url` — the clickable URL (final output of the workflow).
 - `references.full` — the human reference, e.g. `group/project#42`.
 
+## Updating a description later (read this before you edit)
+
+The description is a **single replace-only field**. There is no partial update: whatever you send
+becomes the entire description, and anything you leave out is deleted with no error and a success
+response. Two consequences:
+
+**Re-send everything, every time.** An edit that only means "reword one criterion" still requires the
+full body — every heading, every `<details>` block, every link. Rebuild from the version you just
+fetched rather than retyping from memory.
+
+**Fetch immediately before writing.** Never build the new body from a copy you read earlier in the
+conversation. If anyone touched the item in between — including the user, by hand, in the UI — writing
+a stale copy reverts their edit and reports success. Re-read, apply your change to *that*, then write.
+
 ## Failure handling
 
 - **`test_case` rejected (tier):** `test_case` needs Ultimate. If the API rejects it, tell the user
