@@ -79,7 +79,14 @@ When invoking each Phase 2 agent (in particular Agent 1 / project-rules, Agent 5
 ```
 ## Reviewer Memory Rules
 
-The following rules come from the reviewer's saved auto-memory entries. Treat them as additional project rules — each is a MUST-grade preference unless the body explicitly says otherwise.
+The following rules come from the reviewer's saved auto-memory entries. Treat them as additional
+project rules — each is a MUST-grade preference unless the body explicitly says otherwise.
+
+If a rule's body asserts a CHECKABLE FACT about the codebase or its tooling — "these paths are
+excluded from coverage", "the linter rejects this", "the team removes these", "X fails because Y" —
+verify that claim before emitting a MUST, and report your measurement with the finding. A rule that
+states only a preference ("use named parameters", "always add AAA comments") has nothing to verify;
+apply it directly.
 
 ### Rule: <name>
 <description>
@@ -92,7 +99,15 @@ The following rules come from the reviewer's saved auto-memory entries. Treat th
 ...
 ```
 
-Agents should apply these rules **in addition** to the rules they normally check, and emit findings tagged with `pattern_kind: "memory"` (so they bypass the prevalence probe in G3 — memory rules are explicit and don't need codebase justification).
+Agents should apply these rules **in addition** to the rules they normally check, and emit findings tagged with `pattern_kind: "memory"`. That tag exempts them from the G3 *prevalence* probe — a reviewer preference doesn't need majority adoption to be valid, since the reviewer may be introducing the convention deliberately.
+
+**Exemption from prevalence is not exemption from being wrong.** Where a rule's body cites a codebase fact as its justification, that fact is falsifiable and gets checked — see `consolidation-rules.md` § Section C-bis (G9). A memory rule generalised from one incident often carries a reason that doesn't hold everywhere the rule is applied, and because memory findings bypass prevalence and are treated as MUST-grade, nothing else in the pipeline can catch it. Agents should emit the premise and its measurement in the finding:
+
+```
+premise_check: { claim: "...", verdict: "holds" | "fails" | "unverifiable", measurement: "..." }
+```
+
+When the premise fails, the finding is downgraded to `[Optional]` rather than dropped — the preference may still stand even when its stated reason doesn't, and that call belongs to the reviewer.
 
 ---
 
@@ -108,6 +123,25 @@ After Step 8 (the review has been posted), the orchestrator compares the **local
 | Reviewer marked a Question as `r` (resolved with own answer) | "Policy on X is Y" rule |
 | Reviewer downgraded MUST → Optional | "X is acceptable but not preferred" rule |
 | Reviewer reworded a body substantially | Tone or terminology preference |
+| **G9 premise verification failed** | **Correction to the existing memory — see below** |
+
+### Correcting an existing memory after a failed premise (G9)
+
+Every other signal in the table *adds* a rule. This one *repairs* one, and it's the highest-value write-back in the skill: an uncorrected false premise re-fires on every future review of that module, and each time it produces a MUST the reviewer has to override by hand.
+
+Offer three concrete options rather than a yes/no, since "the premise is false" doesn't by itself say what the reviewer wants:
+
+1. **Narrow** — keep the rule, restrict it to the cases where the premise does hold (usually the right answer; the original incident was real, the generalisation was too wide).
+2. **Keep as-is** — the reviewer wants the preference enforced regardless of the stated reason. Then remove the false justification from the body and mark it as taste, so it stops being checked and stops being downgraded.
+3. **Delete** — the rule was only ever a proxy for the premise, and without it there's nothing left.
+
+Whichever is chosen, the rewritten body must record **the measurement and the date**, so a future session doesn't re-derive the same check:
+
+```markdown
+**Measured on PR #<N> (<YYYY-MM-DD>):** <verbatim config excerpt or prevalence count>
+```
+
+Then update the rule's `description` frontmatter and its `MEMORY.md` index line to match the narrowed scope — a stale one-line hook is what gets skimmed on the next run, so leaving it saying the old thing defeats the correction.
 
 ### Prompt the reviewer
 
