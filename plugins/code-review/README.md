@@ -47,9 +47,14 @@ The skill also activates automatically when you say "review this PR", "code revi
 For every finding the skill produces:
 
 - **Classification** — `MUST` (blocks merge), `[Optional]` (suggestion), `[Question]` (asks the author for rationale)
-- **Confidence score** — findings below 80% are filtered out
-- **File and line** — every inline-postable finding points at a real `file:line` in the diff
+- **Certainty** — is the observation factually true of the code? Findings below 80 are filtered out. Scored separately from importance, so a definitely-present nitpick becomes an `[Optional]` instead of being dropped, and a serious-but-speculative hunch doesn't post as a `MUST`
+- **Materiality** — how much it matters, which is what drives the classification
+- **File and line** — every inline-postable finding points at a real `file:line` **that this PR adds or modifies**; pre-existing violations are context, never an ask
 - **Why** and **Suggested fix** — required for every `MUST` finding
+
+Findings are read against the PR head, fetched into a local ref, so reviews work on **stacked PRs** whose files don't exist on the branch you have checked out.
+
+Reviewer preferences saved in Claude Code's auto-memory are applied as additional rules — but when such a rule justifies itself with a checkable claim about the codebase ("these paths are excluded from coverage", "the team removes these"), the skill verifies that claim first. If the codebase contradicts it, the finding drops to `[Optional]` with the measurement shown, and you're offered a correction to the rule instead of the same false `MUST` on every future review.
 
 In PR mode, the skill previews the full review locally first and asks for explicit approval (`yes` / `no` / `edit`) before posting anything to GitHub. The review event is computed automatically: `REQUEST_CHANGES` if any `MUST` or `[Question]` is present, otherwise `APPROVE`.
 
