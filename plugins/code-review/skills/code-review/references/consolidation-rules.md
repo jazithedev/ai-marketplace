@@ -8,15 +8,16 @@ The orchestrator runs these rules in order, on the in-memory findings list. Ther
 
 ## Run order (Step 6 sub-steps)
 
-1. **Drop low-confidence** — remove every finding with `confidence < 80`.
-2. **Default missing classifications** — MUST for critical/high severity, OPTIONAL for medium, QUESTION for low. No finding leaves Step 6 unclassified.
+1. **Gate on certainty (two-stage)** — drop every finding with `certainty < 40`; hold `40 ≤ certainty < 80` in a **pending set** to be re-tested after dedup, since independent agreement can lift a finding over the bar (see [Section A](#convergence--independent-agreement-raises-certainty)). Findings at `≥ 80` pass straight through. See [Section E](#section-e--certainty-vs-materiality) for what `certainty` means and why it is not the same axis as severity.
+2. **Default missing classifications** — derive from `materiality`: MUST for high, OPTIONAL for medium, QUESTION for low. No finding leaves Step 6 unclassified.
 3. **Same-agent dedup** — within one agent's output, merge findings whose `(file, line)` AND `pattern_essence` match. Keep the more detailed body.
-4. **Cross-agent dedup with disagreement handling** — see [Section A](#section-a--cross-agent-dedup-g7--g4) below.
+4. **Cross-agent dedup with disagreement handling** — see [Section A](#section-a--cross-agent-dedup-g7--g4) below. Runs over `survivors ∪ pending`; afterwards, any pending finding whose post-convergence `certainty` reached 80 rejoins the working set and the rest are dropped.
 5. **Pattern consolidation** — see [Section B](#section-b--pattern-consolidation-g1) below.
 6. **Prevalence calibration** — see [Section C](#section-c--prevalence-calibration-g3) below.
-7. **Match existing PR threads** — pre-existing logic in `SKILL.md` Step 6 sub-step 7. Unchanged.
-8. **Match prior skill-authored reviews** — see [Section D](#section-d--prior-skill-review-suppression-g8) below.
-9. **Collect positive observations + obstacles** — pre-existing logic. Unchanged.
+7. **Memory-premise verification** — see [Section C-bis](#section-c-bis--memory-premise-verification-g9) below.
+8. **Match existing PR threads** — pre-existing logic in `SKILL.md` Step 6 sub-step 8. Unchanged.
+9. **Match prior skill-authored reviews** — see [Section D](#section-d--prior-skill-review-suppression-g8b) below.
+10. **Collect positive observations + obstacles** — pre-existing logic. Unchanged.
 
 ---
 
@@ -33,9 +34,36 @@ Two findings from different agents are considered the same finding when **all th
 When merged:
 
 - Keep the longest `description` (most information).
-- Keep the highest `confidence`.
+- `certainty` = per the convergence rule below (not a plain maximum).
+- `materiality` = the **highest** any contributor emitted. One agent recognising that a shared observation actually matters is signal; the others simply may not have looked at that angle.
 - `agents` field = union of contributors.
 - `agent_classifications` field = the per-agent classification each contributor emitted (used by G4 below).
+
+### Convergence — independent agreement raises certainty
+
+Taking the plain maximum throws away the most useful thing a multi-agent pipeline produces. Agents review in separate contexts and cannot see each other's output, so N of them landing on the same observation is N independent confirmations, not one repeated guess.
+
+```
+base = max(contributor certainties)
+n    = number of DISTINCT agents contributing to the merged finding
+
+n == 1  → certainty = base
+n == 2  → certainty = min(95, base + 5)
+n >= 3  → certainty = min(95, base + 10)
+```
+
+Cap at 95 — never 100. Convergence is strong evidence, not proof; agents share a base model and can share a blind spot.
+
+**This rule can rescue a finding from the `certainty < 80` gate**, which is the point. Three agents independently observing the same true-but-arguably-minor fact at 55–70 each would otherwise all be dropped in sub-step 1 — and because the gate runs *before* dedup, they are dropped before they ever get the chance to reinforce one another.
+
+To make that possible, sub-step 1's gate is a **two-stage** filter:
+
+1. Drop findings with `certainty < 40` outright — too speculative to be worth carrying.
+2. Hold findings with `40 ≤ certainty < 80` in a **pending set** rather than discarding them. Run dedup (Section A) over `survivors ∪ pending`. Any pending finding whose post-convergence `certainty` reaches 80 rejoins the working set; the rest are dropped after dedup completes.
+
+A finding rescued this way is usually a `[Question]`, not a MUST — high certainty that something is *true* combined with genuine uncertainty about whether it *matters* is exactly what a Question is for.
+
+**Do not** apply convergence when contributors are not independent: findings from the same agent (already handled by same-agent dedup), or where one agent's prompt explicitly seeded the observation for another to check. Orchestrator-directed probes are confirmations of your own hypothesis, not independent discoveries — record them at the single agent's certainty.
 
 ### G4 — Classification disagreement
 
@@ -57,7 +85,8 @@ For any group with size ≥ 2:
 2. **Merge.** Produce a single consolidated finding:
    - `description`: keep the original short description (without locations).
    - `body`: append a `Locations to fix:` bullet list of every `(file, line, identifier)` from the merged set.
-   - `confidence`: maximum of contributors.
+   - `certainty`: maximum of contributors. The convergence rule from Section A does **not** apply here — G1 groups the same pattern at *different locations*, so the members corroborate the pattern's breadth, not each other's accuracy.
+   - `materiality`: maximum of contributors.
    - `agents`: union of contributors.
 3. **Suggested-fix check.** If members of the group have **structurally different** `suggested_fix` shapes (different signatures, different return types, different surrounding context), **do NOT consolidate** — keep them as separate findings. Consolidation is only correct when the fix template is identical modulo identifier substitution. Example of valid consolidation: 8 methods all need a `#[\Override]` attribute prepended. Example of invalid consolidation: 3 methods all violate naming, but each needs a different rename.
 
@@ -93,9 +122,72 @@ The downgrade/drop happens silently — the finding goes from MUST → Optional 
 
 ### When prevalence isn't applicable
 
-- **Genuine bug findings** (Agent 2's "null pointer" / "race condition" / "security issue"): skip the probe. Confidence stays as the agent emitted it.
+- **Genuine bug findings** (Agent 2's "null pointer" / "race condition" / "security issue"): skip the probe. `certainty` stays as the agent emitted it.
 - **Project-rule violations from explicit AGENTS.md/CLAUDE.md rules** (Agent 1's "the AGENTS.md says X is required"): skip the probe. The rule is documented — it's MUST regardless of how widely it's followed today.
-- **Reviewer-memory rules** (loaded via G5): skip the probe. Memory rules are explicit reviewer preferences and should not be diluted by codebase prevalence.
+- **Reviewer-memory rules** (loaded via G5): skip the *prevalence* probe. A memory rule is an explicit reviewer preference and doesn't need majority adoption to be valid — the reviewer may be introducing the convention deliberately. But skipping prevalence is **not** the same as being unfalsifiable: continue to [Section C-bis](#section-c-bis--memory-premise-verification-g9), which checks the rule's own stated premise.
+
+---
+
+## Section C-bis — Memory-premise verification (G9)
+
+A memory rule can be wrong. Not wrong about the reviewer's taste — wrong about the **codebase fact it cites as its justification**. Section C deliberately exempts memory rules from prevalence dilution; this section exists so that exemption doesn't also make them unfalsifiable.
+
+### The failure this prevents
+
+Memories are written from a single incident and generalise as they're written. A reviewer asks for one attribute to be removed from one test class; the memory records "never use this attribute in this module" and adds a *reason* — "several classes here are excluded from coverage, so the attribute warns". Both halves then get applied together forever, including where the reason does not hold.
+
+Because `pattern_kind: "memory"` bypasses prevalence and agents are told to treat memory rules as MUST-grade, multiple agents will independently emit a high-certainty MUST, and G4's weakest-wins tiebreak won't help — the agents *agree*. Nothing downstream can challenge it. The reviewer then receives a blocking demand built on a premise that a single `grep` would have refuted.
+
+### Which memory rules have a premise to check
+
+Only those whose body makes a **falsifiable claim about the codebase or its tooling**. Signals, in the rule's own text:
+
+- A tooling/config assertion — "these paths are excluded from coverage", "the linter rejects this", "CI fails on X".
+- A prevalence assertion — "the team removes these", "we don't use X anywhere", "every module does Y".
+- A causal assertion — "X fails/warns because Y".
+
+Rules with **no** factual premise — "use named parameters for multi-arg calls", "always add AAA comments", "prefer `private static` for stateless helpers" — are pure preference. There is nothing to verify. They keep their bypass and are unaffected by this section. **Do not** invent a prevalence test for a taste rule; that reintroduces exactly the dilution Section C exempts them from.
+
+### Probe algorithm
+
+1. **Extract the premise** as a single checkable proposition.
+2. **Pick the cheapest decisive check.** Read the config file the rule refers to (`phpunit.xml`, `.eslintrc`, `deptrac.yaml`, CI workflow); or grep the sibling set for the claimed prevalence; or run the tool on one file. One command is normally enough — this is a cheap guard, not an investigation.
+3. **Record the measurement verbatim.** The number or config excerpt goes in the finding body. A claim like "the memory looks stale" without a measurement is not a verification, and must not be used to downgrade anything.
+
+Prefer to have the agent run this at Phase 2 time and report it (see SKILL.md Step 5), since it already has the file open. The orchestrator verifies only what came back unmeasured.
+
+### Outcome mapping
+
+| Premise check | Action |
+|---------------|--------|
+| **Holds** | Keep the agent's classification. Memory rule confirmed; no note needed. |
+| **Fails** | Downgrade to `[Optional]`. Body must state the rule, the contradicting measurement, and that it is being raised for consistency only. Add a memory-correction candidate for Step 9. |
+| **Cannot be checked cheaply** | Keep the classification but cap at `[Optional]` if it would otherwise be MUST, and say in the body that the premise is unverified. Never block a merge on an unverified premise. |
+| **No premise present** (taste rule) | Skip this section entirely. Classification unchanged. |
+
+### What a downgraded finding must say
+
+Say both things plainly. The author needs to know the ask is soft and why; the reviewer needs to see their own rule was contradicted.
+
+```markdown
+**🟡 [Optional]** — <the rule's ask>
+
+I have a recorded preference for <rule>, so flagging it — but the stated basis doesn't
+hold here, so treat this as consistency-only rather than blocking:
+
+- <the measurement, verbatim: config excerpt, prevalence count>
+- <why that contradicts the rule's premise>
+
+Your call entirely; the rule looks over-broad and I'll narrow it on my side.
+```
+
+Never silently drop the finding either. The reviewer wrote the rule for a reason, and the preference may still stand even with a broken justification — that judgement is theirs, so surface it as Optional and let them decide.
+
+### Never downgrade on these grounds
+
+- **The memory is old.** Age is not evidence. Verify or leave it alone.
+- **The codebase mostly ignores the rule.** That's prevalence, which Section C deliberately exempts memory rules from. Only the rule's *own stated premise* is in scope here.
+- **The finding feels pedantic.** That's `materiality`, settled by classification, not by premise verification.
 
 ---
 
@@ -135,7 +227,7 @@ Build two indexes keyed by normalised signature:
 
 ### Action selection (four cases)
 
-For each new candidate finding still in the working set after Step 6 sub-steps 1–7:
+For each new candidate finding still in the working set after Step 6 sub-steps 1–8:
 
 ```
 sig = normalise(candidate.signature)
@@ -204,6 +296,47 @@ No auto-generation notice on the reply (per SKILL.md — the notice lives only o
 
 ---
 
+## Section E — Certainty vs materiality
+
+A single `confidence` number cannot do both jobs it was being asked to do, and conflating them produces errors in **both** directions at once:
+
+- A finding can be **certainly present but barely important** — a positional argument, a duplicated test. Scored on importance it lands at 40 and is dropped, even though it's a fact.
+- A finding can be **important if true but doubtful** — "this looks like it could deadlock". Scored on importance it lands at 95 and posts as a MUST, on a hunch.
+
+Agents therefore emit two independent scores.
+
+| Field | Question it answers | Range | What it drives |
+|-------|--------------------|-------|----------------|
+| `certainty` | Is this observation factually true of the code as written? | 0–100 | The sub-step 1 gate, the convergence rule, display, sort order |
+| `materiality` | If true, how much does it matter? | `high` / `medium` / `low` | Classification: MUST / `[Optional]` / `[Question]` |
+
+### Scoring certainty
+
+Score only "would a careful engineer reading this code agree the observation is accurate?"
+
+- **95** — verified by reading the code or running the check. "This method has no `#[Override]`" after grepping it.
+- **80–90** — clear from the diff, no plausible alternative reading.
+- **50–79** — depends on context not visible in the diff (a caller's guarantees, runtime config). **Held pending** — survives only if convergence lifts it to 80.
+- **< 40** — speculation. Dropped.
+
+Verifying a claim is what moves certainty, not restating it more forcefully. If you can check it, check it, then score 95.
+
+### Scoring materiality
+
+- **high** → MUST. Wrong behaviour, data loss, a security hole, a broken published contract, or an explicit project/reviewer rule whose premise holds. Something the author must change before merge.
+- **medium** → `[Optional]`. Real improvement, author's discretion: design smells, redundant tests, naming, conventions with mixed adoption.
+- **low** → `[Question]`. Might be deliberate; you need the author's rationale before you'd know whether it's a defect.
+
+### Note for both scores
+
+They are genuinely independent — do not let one pull the other. `certainty: 95, materiality: low` is a perfectly normal finding (a fact that probably doesn't matter, so ask about it). So is `certainty: 85, materiality: high`. If you catch yourself raising `certainty` because the issue feels serious, stop: that's `materiality`.
+
+### Backward compatibility
+
+An agent that emits only a legacy `confidence` is handled as `certainty = confidence`, with `materiality` derived from its `classification` (MUST → high, OPTIONAL → medium, QUESTION → low). No agent output is rejected for using the old shape.
+
+---
+
 ## Output shape after Step 6
 
 After all consolidation passes, each finding in the cleaned list has the following shape (used by Step 7 preview and Step 8 posting):
@@ -211,7 +344,13 @@ After all consolidation passes, each finding in the cleaned list has the followi
 ```
 {
   "classification": "MUST" | "OPTIONAL" | "QUESTION",
-  "confidence": 80-100,
+  "certainty": 80-100,
+  "materiality": "high" | "medium" | "low",
+  "premise_check": {                            // only for pattern_kind "memory" with a factual premise
+    "claim": "<the premise, as a proposition>",
+    "verdict": "holds" | "fails" | "unverifiable",
+    "measurement": "<verbatim config excerpt or prevalence count>"
+  },
   "file": "<path>",
   "line": <int>,
   "description": "<short title>",

@@ -73,6 +73,38 @@ gh pr diff <PR> --name-only
 
 In **local mode**: use `git diff HEAD` and `git diff HEAD --name-only` instead. Infer purpose from branch name and commit messages.
 
+### Step 1b: Make the PR's files readable (`{source_ref}`) — PR mode only
+
+**Do this before launching any agent, including Phase 1.** Every agent needs to read the *full* versions of changed files, not just the diff hunks — the hunks hide the surrounding context that distinguishes a real finding from a misreading (helper methods, the rest of a class, what a refactor replaced).
+
+The working copy is usually checked out on the default branch, which for a **stacked PR does not contain the changed files at all**. An agent that greps the working copy in that situation gets zero hits and silently concludes the code doesn't exist. Fetch the PR head into a local ref instead:
+
+```bash
+git fetch origin refs/pull/<PR>/head:refs/pr/<PR>
+```
+
+Pass `{source_ref} = refs/pr/<PR>` to **every** agent (Phase 1 and Phase 2) along with the read recipe:
+
+```bash
+git show refs/pr/<PR>:<path>                              # full file content at PR head
+git grep -n <pattern> refs/pr/<PR> -- <pathspec>          # search the PR's tree
+git show refs/pr/<PR> --stat                              # commits on the branch
+```
+
+A named ref is deliberate — `FETCH_HEAD` is overwritten by any concurrent fetch, and agents run in parallel.
+
+**Tear it down after Step 9** so the reviewer's repo is left as it was found:
+
+```bash
+git update-ref -d refs/pr/<PR>
+```
+
+Notes:
+
+- Use `gh api "repos/{owner}/{repo}/contents/{path}?ref={sha}"` only as a fallback when the fetch fails (no push access to the fork, detached CI checkout). Never `curl raw.githubusercontent.com` — it returns an empty body on private repos instead of failing.
+- In **local mode** there is no ref to fetch; `{source_ref}` is the working tree and agents read files directly.
+- Do not `git checkout` the PR branch. The reviewer may have uncommitted work, and a checkout changes state you don't own.
+
 ### Step 2: Launch 2 parallel agents (Sonnet model)
 
 Launch both agents in a single message so they run concurrently:
@@ -188,18 +220,29 @@ Read your instructions from ${CLAUDE_PLUGIN_ROOT}/skills/code-review/agents/{age
 
 {Any agent-specific context: rules, diff, PR number, etc.}
 
+Reading the PR's files: the working copy may not contain them (see Step 1b). Read full file
+contents at the PR head with `git show {source_ref}:<path>` and search with
+`git grep -n <pattern> {source_ref} -- <pathspec>`. Do read the full versions of the files
+you're reviewing — the diff hunks hide surrounding context.
+
 Diff to review:
 {diff}
 ```
 
+Write the diff to a temp file and pass the **path** rather than inlining it when it exceeds a
+few hundred lines — agents have Read and can pull it themselves, and inlining the same large diff
+into 7 prompts is pure waste.
+
 **Launch these agents simultaneously:**
+
+Every agent additionally receives `{source_ref}` from Step 1b.
 
 | Agent | File | Model | Needs | Notes |
 |-------|------|-------|-------|-------|
 | Agent 1 | `agents/project-rules.md` | Sonnet | `{rules}` + `{reviewer_rules}` + diff | |
 | Agent 2 | `agents/bug-smell-scan.md` | Sonnet | diff | |
 | Agent 3 | `agents/historical-context.md` | **Haiku** | file list + `{base_ref}` + `{default_branch}` | Git log/blame summarisation, stacked-PR aware |
-| Agent 4 | `agents/previous-comments.md` | **Haiku** | PR number, repo, `{prior_skill_findings}` | **PR mode only** — structured parsing of API output |
+| Agent 4 | `agents/previous-comments.md` | **Haiku** | PR number, repo, `{prior_skill_findings}` | **PR mode only** — skip entirely when the PR has zero reviews and zero comments; it has nothing to parse |
 | Agent 5 | `agents/code-documentation.md` | Sonnet | diff + `{reviewer_rules}` | |
 | Agent 6 | `agents/tactical-ddd.md` | Sonnet | diff | Reads its own references (on-demand) |
 | Agent 7 | `agents/strategic-ddd.md` | Sonnet | diff + `{reviewer_rules}` | Reads its own references (on-demand) |
@@ -208,6 +251,8 @@ Diff to review:
 Phase 1 agents (scope-analysis, size-analysis) also run on **Haiku** — see their respective files.
 
 The `{reviewer_rules}` block is the output of Step 4b. Always pass it to the agents listed above, even when empty — agents check for content and skip the section if blank.
+
+**When a `{reviewer_rules}` entry states a checkable fact, say so in the prompt.** A memory body that asserts something about the codebase ("these dirs are excluded from coverage", "the team removes X") gives the agent a premise it can verify. Instruct the agent to verify it and report the measurement alongside the finding — that measurement is what Section C-bis consumes in Step 6. Without it the orchestrator has to re-derive the check itself.
 
 ---
 
@@ -218,12 +263,13 @@ The `{reviewer_rules}` block is the output of Step 4b. Always pass it to the age
 Read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/consolidation-rules.md` and apply the run order it specifies. The high-level sequence:
 
 1. Collect all findings from all agents.
-2. **Drop low-confidence** — remove any finding with `confidence < 80`.
-3. **Default missing classifications** — MUST for critical/high severity, OPTIONAL for medium, QUESTION for low. No finding leaves Step 6 unclassified.
+2. **Gate on certainty (two-stage)** — `certainty` is "is this observation factually true of the code", NOT "does it matter" — see Section E of `consolidation-rules.md`. Drop findings below 40; **hold** 40–79 in a pending set rather than discarding them, because independent cross-agent agreement in sub-step 5 can lift them over the bar; pass 80+ straight through. A finding that is definitely present but arguably harmless clears this gate and is settled by classification instead. Findings carrying only a legacy `confidence` field are treated as `certainty = confidence`.
+3. **Default missing classifications** — derive from `materiality`: MUST for high, OPTIONAL for medium, QUESTION for low. No finding leaves Step 6 unclassified.
 4. **Same-agent dedup** — within one agent's output, merge findings whose `(file, line)` AND `pattern` match.
-5. **Cross-agent dedup with disagreement handling (G7 + G4)** — see Section A of `consolidation-rules.md`. Two findings dedup when location matches AND descriptions share Jaccard similarity ≥ 0.5 on token bigrams AND pattern matches. On classification disagreement, pick the weakest (QUESTION beats OPTIONAL beats MUST) and annotate the finding with the disagreement (shown only in the local preview).
+5. **Cross-agent dedup with disagreement handling (G7 + G4)** — see Section A of `consolidation-rules.md`. Two findings dedup when location matches AND descriptions share Jaccard similarity ≥ 0.5 on token bigrams AND pattern matches. On classification disagreement, pick the weakest (QUESTION beats OPTIONAL beats MUST) and annotate the finding with the disagreement (shown only in the local preview). **Independent agreement raises `certainty`** — see Section A's convergence rule; three agents arriving at the same observation separately is evidence, not noise.
 6. **Pattern consolidation (G1)** — see Section B of `consolidation-rules.md`. Group remaining findings by `(pattern, classification)`. For any group with size ≥ 2 whose `suggested_fix` shapes are identical modulo identifier substitution, merge into a single finding anchored at the lowest (file, line). The merged body lists every location.
 7. **Prevalence calibration (G3)** — see Section C of `consolidation-rules.md`. For every finding with `pattern_kind: "convention"`, run a codebase-prevalence probe via `grep` against a structurally-similar file glob. Reclassify: ≥0.8 keep MUST, 0.5–0.8 downgrade to Optional, <0.5 drop. Skip the probe for `pattern_kind ∈ {bug, project-rule, memory}`.
+7b. **Memory-premise verification (G9)** — see Section C-bis of `consolidation-rules.md`. For every finding with `pattern_kind: "memory"` whose rule body asserts a **falsifiable claim about the codebase**, verify that claim before allowing MUST. If the premise is false, downgrade to `[Optional]`, state both the rule and the contradicting measurement in the body, and raise a memory-correction candidate in Step 9. Memory rules that assert only a preference (no factual premise) are unaffected and keep their prevalence bypass.
 8. **Match existing PR review comments** (PR mode only). Fetch existing inline comments via `gh api repos/{owner}/{repo}/pulls/{pr}/comments`. For each remaining finding, check whether an existing comment already points at the same `file:line` and makes the same essential point. When it matches, **remove the finding from the Required / Suggestions / Questions buckets** and place it instead in a new **Existing Threads** bucket, recording:
    - The original comment ID (you'll need it to react/reply)
    - Stance: `react` if your point is identical to the existing comment, `reply` if you have something to add.
@@ -237,7 +283,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/consolidation-rules.md
    Classification escalation (e.g., prior was `[Optional]`, candidate is `MUST`) flips Case 1 (react) into Case 2 (reply with an escalation note).
 10. Collect positive observations from Agent 8.
 11. **Collect Obstacles Encountered** from every agent's output. Deduplicate identical entries and keep them verbatim. Drop entries that say "None".
-12. Group by classification (MUST → OPTIONAL → QUESTION) and within each, sort by confidence descending.
+12. Group by classification (MUST → OPTIONAL → QUESTION) and within each, sort by `certainty` descending.
 
 Each finding leaving Step 6 has the shape described at the bottom of `references/consolidation-rules.md`.
 
@@ -260,7 +306,7 @@ Rewrite each `body` to be ~30% shorter while preserving every concrete claim, fi
 - Drop "Why:" lines when the description already explains the why.
 - Compress code blocks to ≤ 10 lines (replace longer segments with `// …`).
 - Strip greetings, padding, "I think", "It seems", "perhaps".
-- Keep markdown formatting, badges, and confidence/pattern footers verbatim.
+- Keep markdown formatting, badges, and certainty/pattern footers verbatim.
 
 Input (JSON):
 {findings_array}
@@ -305,7 +351,7 @@ _Within **Required Changes**, **Suggestions**, and **Questions**, separate conse
 ### Required Changes ({count})
 Items that must be addressed before merge.
 
-- [{confidence}%] **{file}:{line}** — {description}
+- [{certainty}%] **{file}:{line}** — {description}
   **Why:** {explanation}
   **Suggested fix:** {concrete code alternative}
   *(Pattern: {name}, Agents: {which agents agreed}{disagreement annotation if any})*
@@ -313,7 +359,7 @@ Items that must be addressed before merge.
 ### Suggestions ({count})
 Non-blocking improvements — author's discretion.
 
-- [{confidence}%] [Optional] **{file}:{line}** — {description}
+- [{certainty}%] [Optional] **{file}:{line}** — {description}
   *(Pattern: {name})*
 
 ### Questions ({count})
@@ -322,7 +368,7 @@ Clarification needed from the author. **For each Question, the reviewer can choo
   - `[r]` resolve in-place with own answer — won't be posted; offered for memory write-back in Step 9
   - `[d]` drop entirely
 
-- [{confidence}%] [Question] **{file}:{line}** — {description}
+- [{certainty}%] [Question] **{file}:{line}** — {description}
   *(Pattern: {name})*
   > [k] keep / [r] resolve / [d] drop
 
@@ -406,15 +452,15 @@ _This code review was made automatically by Krzysztof Trzos Code Review AI Skill
  Omit the General Findings heading if there are none.}
 
 ### Required Changes
-- [{confidence}%] {description}
+- [{certainty}%] {description}
   **Why:** {explanation}
   **Suggested fix:** {concrete alternative}
 
 ### Suggestions
-- [{confidence}%] [Optional] {description}
+- [{certainty}%] [Optional] {description}
 
 ### Questions
-- [{confidence}%] [Question] {description}
+- [{certainty}%] [Question] {description}
 ```
 
 **The template above is exhaustive.** The top-level body contains exactly: the auto-generation notice, Summary table, PR Discipline, Positive Observations, and General Findings. Nothing else.
@@ -447,7 +493,7 @@ Each inline finding posts to its file:line with a body like:
 {concrete alternative}
 ```
 
-_Confidence: {N}% · Pattern: {name} · Agents: {which agreed}_
+_Certainty: {N}% · Pattern: {name} · Agents: {which agreed}_
 ```
 
 Use the badge that matches the classification:
@@ -568,6 +614,9 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/reviewer-memory-loadin
 | Reviewer marked a Question as `r` (resolve with own answer) | "Policy on X is Y" rule |
 | Reviewer downgraded MUST → Optional via `edit` | "X is mixed convention, not strict" rule |
 | Reviewer reworded a body substantially | Tone or terminology preference |
+| **A memory rule's premise failed verification (G9)** | **Correction to the existing memory — narrow its scope, or delete it** |
+
+The last row is the important one: it's the only signal that fixes a rule rather than adding one, so it stops the same false MUST recurring on every future review. Raise it whenever Section C-bis downgraded a finding, and propose concrete options — narrow the rule to the cases where its premise does hold, keep it as-is, or delete it. Cite the measurement that contradicted it, and name the existing memory file so the reviewer knows exactly what would change.
 
 For each candidate signal, ask the reviewer:
 
@@ -641,8 +690,9 @@ This mode skips Phases 1 and 2 entirely. It addresses author responses on the sk
 - **Explain WHY for MUST findings.** Every required change needs a reason and a concrete code alternative.
 - **Acknowledge good work.** Positive observations matter.
 - **Be specific.** Every finding must reference a file and line.
-- **Be honest about confidence.** Don't inflate scores. If unsure, score lower.
-- **Respect the 80% threshold.** Don't include low-confidence noise.
+- **Be honest about certainty.** Don't inflate scores. If unsure, score lower. Never raise `certainty` to squeeze a finding past the gate — if it doesn't clear 80, it doesn't post.
+- **Respect the 80% threshold.** Don't include findings you aren't sure are factually present. But score `certainty` on *presence*, not on *importance* — a definitely-present nitpick is high-certainty and low-materiality, which makes it an `[Optional]`, not a dropped finding.
+- **A reviewer-memory rule is evidence, not proof.** When a memory rule's stated justification is checkable, check it. If the codebase contradicts it, say so plainly in the finding, drop to `[Optional]`, and offer to correct the memory in Step 9 — do not post a MUST built on a false premise, and do not silently discard the rule either.
 - **Deduplicate across agents.** Same issue from multiple agents → keep the most detailed, note agreement.
 - **PR discipline comes first.** Scope/size violations are the most important feedback.
 - **Don't nitpick style** if the project has a formatter/linter (ECS, PHP-CS-Fixer).
