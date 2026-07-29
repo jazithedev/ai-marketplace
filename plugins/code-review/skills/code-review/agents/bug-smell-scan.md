@@ -1,5 +1,11 @@
 # Agent 2 — Bug & Design Smell Scan
 
+**Before you start, read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/agent-output-contract.md`.**
+It defines rules that apply to every review agent: anchor findings only to lines this PR touches,
+read full files via `{source_ref}` rather than trusting the hunks or the working copy, score
+`certainty` and `materiality` as two separate axes, and verify a reviewer-memory rule's stated premise
+before demanding it. This file adds the dimension-specific checks on top of that contract.
+
 Scan the diff for potential bugs and design smells.
 
 ## Bugs to Check
@@ -34,7 +40,9 @@ For each issue:
 - `pattern`: short stable name (e.g., `null-deref`, `boolean-flag-propagation`, `stamp-coupling`)
 - `pattern_kind`: `bug` for genuine defects (null deref, race, security); `design` for design smells; `convention` only when the smell is about following an unwritten codebase pattern
 - Bug/smell description
-- Confidence score (0-100) — for `pattern_kind: convention`, default 70 to leave room for the orchestrator's prevalence probe (G3)
+- `certainty` (0-100) — is the observation factually true of the code? Not how much it matters.
+- `materiality` — `high` (MUST) / `medium` (Optional) / `low` (Question). See the output contract.
+- For `pattern_kind: convention`, keep `materiality` at `medium` unless a documented project rule backs it — the orchestrator's prevalence probe (G3) decides the rest.
 - Severity: critical/high/medium/low
 
 For `pattern_kind: convention` you SHOULD also provide a `pattern_marker` (a grep-able string).

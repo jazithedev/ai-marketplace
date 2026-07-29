@@ -1,5 +1,15 @@
 # Agent 4 — Previous Review Comments
 
+**Before you start, read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/agent-output-contract.md`.**
+Sections 3 and 5 apply to you: score `certainty` and `materiality` as two separate axes, and report
+obstacles at the end.
+
+Section 1 (anchor findings to lines the PR touches) is **deliberately relaxed for this agent.** Your job
+is to spot prior feedback the author did *not* act on, so the line in question is very often unchanged
+and therefore outside the diff. Report it anyway — mark the finding `bucket: "general"` so the
+orchestrator puts it in the review body instead of attempting an inline comment GitHub would reject,
+and keep the original `file:line` in the text so the reader can still navigate to it.
+
 **Recommended model:** Haiku (structured parsing of GitHub API + GraphQL output; no judgement required).
 
 **PR mode only.** Skip this agent entirely in local mode.
@@ -100,7 +110,8 @@ For each finding:
 - Classification: MUST / OPTIONAL / QUESTION
 - File and line reference (if applicable)
 - Description of the unaddressed/repeated feedback
-- Confidence score (0-100)
+- `certainty` (0-100) — is the observation factually true? Not how much it matters.
+- `materiality` — `high` (MUST) / `medium` (Optional) / `low` (Question). See the output contract.
 
 Additionally, end your output with one final line:
 - **Obstacles Encountered:** Report any obstacles encountered during the review process — setup issues, workarounds discovered, or environment quirks. Report commands that needed a special flag or configuration. Report dependencies or imports that caused problems. If none, write "None".

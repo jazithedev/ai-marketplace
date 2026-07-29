@@ -1,5 +1,11 @@
 # Agent 5 — Code Comment & Documentation Quality
 
+**Before you start, read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/agent-output-contract.md`.**
+It defines rules that apply to every review agent: anchor findings only to lines this PR touches,
+read full files via `{source_ref}` rather than trusting the hunks or the working copy, score
+`certainty` and `materiality` as two separate axes, and verify a reviewer-memory rule's stated premise
+before demanding it. This file adds the dimension-specific checks on top of that contract.
+
 Review the diff for comment and documentation issues. Also apply any `{reviewer_rules}` block provided in your prompt — those are reviewer-memory entries. Treat `type: feedback` entries as MUST-grade rules (e.g., a memory entry saying "always use AAA comments in tests" is a MUST).
 
 ## What to Check
@@ -26,7 +32,8 @@ For each issue:
 - `pattern`: short stable name (e.g., `aaa-test-comments`, `misleading-comment`, `dead-code`)
 - `pattern_kind`: `memory` when the rule came from `{reviewer_rules}`; `convention` otherwise
 - Description
-- Confidence score (0-100)
+- `certainty` (0-100) — is the observation factually true of the code? Not how much it matters.
+- `materiality` — `high` (MUST) / `medium` (Optional) / `low` (Question). See the output contract.
 
 Additionally, end your output with one final line:
 - **Obstacles Encountered:** Report any obstacles encountered during the review process — setup issues, workarounds discovered, or environment quirks. Report commands that needed a special flag or configuration. Report dependencies or imports that caused problems. If none, write "None".
