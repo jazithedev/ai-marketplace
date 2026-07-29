@@ -2,6 +2,8 @@
 
 Turn a one- or two-sentence brief into a properly structured GitLab work item — an Issue, Incident, Task, or Test case. You describe the work; the skill drafts the full work item against a standard template, previews it for your approval, and creates it through the `glab` CLI — so you never have to remember the template structure or which project to file to.
 
+When the work item later changes, the same skill updates it against the same standards, without quietly destroying the parts you weren\'t editing.
+
 ## Features
 
 - **Native work-item types** — creates a real GitLab `Issue`, `Incident`, `Task`, or `Test case` (via `glab api`, which can set the type that `glab issue create` cannot)
@@ -13,6 +15,9 @@ Turn a one- or two-sentence brief into a properly structured GitLab work item �
 - **Preview before create** — always shows the full assembled work item and waits for explicit approval before anything hits GitLab
 - **Label-safe** — only ever applies labels that already exist, so it never pollutes the shared label set
 - **Optional fields done right** — optional epic (graceful Free-tier fallback), assignee (username resolved to id), and confidentiality toggle; no milestone, weight, or due date unless you ask
+- **Acceptance criteria that QA can actually verify** — naming conventions, types and nullability, and internal structure are kept out of the criteria and pushed into the `Implementation Plan`, and a criterion never pre-commits the team to a decision nobody has taken yet
+- **`Action Points` for what isn't settled** — a visible section for the questions another team has to answer before the work is buildable, retired as each one is answered
+- **Safe updates** — re-reads the item immediately before writing so it can't revert someone else's edit, re-sends the complete description so `<details>` blocks and links survive, and previews the change as a diff
 
 ## Requirements
 
@@ -35,3 +40,5 @@ Or manually copy `skills/create-gitlab-work-item/` to `~/.claude/skills/create-g
 ```
 
 The skill also activates when you ask to create, raise, open, file, or log a GitLab work item / issue / ticket / incident / task / test case — and offers itself proactively when you describe a bug or unit of work that clearly belongs in a work item.
+
+It activates for changes too: "update the work item", "reword the acceptance criteria", "fold this answer into the issue".
