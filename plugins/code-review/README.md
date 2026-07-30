@@ -56,6 +56,8 @@ Findings are read against the PR head, fetched into a local ref, so reviews work
 
 Reviewer preferences saved in Claude Code's auto-memory are applied as additional rules — but when such a rule justifies itself with a checkable claim about the codebase ("these paths are excluded from coverage", "the team removes these"), the skill verifies that claim first. If the codebase contradicts it, the finding drops to `[Optional]` with the measurement shown, and you're offered a correction to the rule instead of the same false `MUST` on every future review.
 
+A memory rule's **carve-out is permission, never a demand**. Most such rules are subtractive ("remove narrative PHPDoc, but keep array-shape annotations"), and the exception clause exempts code from the rule rather than creating a rule of its own — so the skill flags prose a PR *adds*, never prose a PR *deletes*. Relatedly, the skill never asks for documentation to be added or restored: absent documentation is not a finding, and a constraint worth stating is reported as something to express in code (a value object, a guard clause, a named argument, a named test) rather than in a paragraph.
+
 In PR mode, the skill previews the full review locally first and asks for explicit approval (`yes` / `no` / `edit`) before posting anything to GitHub. The review event is computed automatically: `REQUEST_CHANGES` if any `MUST` or `[Question]` is present, otherwise `APPROVE`.
 
 ## Requirements
