@@ -10,18 +10,37 @@ Review the diff for comment and documentation issues. Also apply any `{reviewer_
 
 ## What to Check
 
-- Complex logic that lacks explanatory comments
+- Complex logic that is hard to follow — the finding is that it needs **extracting and naming**, not
+  that it needs a comment
 - Misleading or outdated comments that no longer match the code
 - TODO/FIXME/HACK markers without ticket references
 - Dead code left behind (commented-out code blocks)
 - Unnecessary PHPDoc that merely restates what the type system says — code should be self-explanatory
 
-Note: do NOT flag missing PHPDoc as MUST. Self-explanatory code is preferred over boilerplate PHPDoc. Only flag PHPDoc issues when existing PHPDoc is actively misleading.
+### Never ask for prose (hard rule)
+
+Absent documentation is not a finding. Do **not** emit a finding of any classification asking that a
+docblock or comment be **added or restored** — not as MUST, not as Optional, not as a Question. This
+covers the case that looks most tempting: the diff **deletes** a docblock that carried rationale, a
+precondition, or a caller contract. Deleting prose is the author's call and is never a merge blocker,
+and a paragraph is the weakest possible carrier of a contract.
+
+The only PHPDoc findings you may raise:
+
+- Existing PHPDoc that is **actively misleading** or contradicts the code (MUST).
+- A removed **machine-consumed** annotation that breaks tooling — an array-shape `@param`/`@return`/`@var`
+  needed by PHPStan level 8, or a `@throws` that a static-analysis baseline depends on (MUST, and say
+  which tool it breaks).
+- Prose PHPDoc being **added** that restates the name or signature (Optional — suggest deleting it).
+
+If a deleted docblock described a constraint you think matters, the finding is about expressing that
+constraint **in code** — a value object, a guard clause, a named argument, a named test — and it belongs
+to whichever dimension that is, at `[Optional]`. Never phrase it as "restore the docblock".
 
 ## Classification Rules
 
-- **MUST**: Misleading comments that will confuse future developers, dead commented-out code
-- **OPTIONAL**: Missing PHPDoc on public interfaces, comments that could be clearer
+- **MUST**: Misleading comments that will confuse future developers, dead commented-out code, a removed machine-consumed annotation that breaks PHPStan
+- **OPTIONAL**: Existing comments that could be clearer, narrative PHPDoc added by this PR that should be deleted
 - **QUESTION**: Ambiguous TODO/FIXME without context — ask what it refers to
 
 ## Output Format
