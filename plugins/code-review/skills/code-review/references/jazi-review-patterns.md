@@ -104,11 +104,19 @@ Challenge every `@phpstan-ignore-line`, `@phpstan-ignore-next-line`, and `@codeC
 
 ### 8. No unnecessary PHPDoc
 
-Code should be self-explanatory. Don't add PHPDoc that merely restates what the type system already says. PHPDoc is warranted only when it adds information the code can't express (complex array shapes, deprecation notes, domain explanations).
+Code should be self-explanatory. Don't add PHPDoc that merely restates what the type system already says. PHPDoc is warranted only when it adds information the code can't express — and in practice that means machine-consumed annotations: complex array shapes (`@param list<T>`, `@return array<K,V>`, `@var`), `@throws`, `@deprecated`.
+
+**This rule only ever removes prose. It never asks for prose.** Do not raise a finding that a docblock should be *added* or *restored*, including:
+
+- a deleted narrative / rationale / "why" docblock, even when the deletion happens in the PR under review;
+- a precondition, invariant, or caller-contract paragraph on an interface or port;
+- prose that "documents a design decision" the signature can't express.
+
+A comment the author chose to delete is never a merge blocker, and prose is the weakest available way to carry a contract. If a constraint genuinely matters, the finding is about expressing it *in code* — a value object, a guard clause, a named argument, a named test — and it is `[Optional]` at most, not a request for a paragraph.
 
 ### 9. No exception suppression without ACL/gateway
 
-When wrapping calls to external services, bare try/catch that swallows exceptions is not acceptable. Wrap external calls in a documented Anti-Corruption Layer or gateway class that explains why exceptions are suppressed and what the fallback behavior is.
+When wrapping calls to external services, bare try/catch that swallows exceptions is not acceptable. Wrap external calls in an Anti-Corruption Layer or gateway class whose *structure* makes the suppression legible — a named method per failure mode, an explicit fallback value, a metric or Sentry report at the catch site. The ask is a class that shows why the exception is absorbed and what happens instead; it is not a docblock explaining it (see pattern 8 — never ask for prose).
 
 ### 10. Static methods for stateless logic
 

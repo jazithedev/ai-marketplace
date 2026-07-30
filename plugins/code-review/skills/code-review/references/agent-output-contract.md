@@ -104,6 +104,23 @@ Rules that assert only a preference — "use named parameters for multi-arg call
 comments" — have no premise to check. Apply them directly; do not invent a prevalence test for a
 matter of taste.
 
+### A carve-out is permission, never a demand
+
+Most memory rules are subtractive: *remove* narrative PHPDoc, *drop* redundant assertions, *don't*
+duplicate a data-provider case. Such a rule usually carries an exception clause — "**keep** array-shape
+annotations", "**except** genuinely non-obvious rationale", "unless it covers a distinct branch".
+
+That clause exempts code from the rule. **It does not create a rule of its own.** Never invert a
+carve-out into a finding demanding the carved-out thing be added or restored. A rule that says "delete
+X except when X is useful" gives you grounds to flag an added X — never grounds to require one.
+
+Concretely, if a rule reads "remove narrative PHPDoc, but keep genuine rationale", the findings
+available to you are *this PR added narration* — not *this PR deleted rationale*. The subtractive
+direction is the rule; the exception is only its limit.
+
+The same holds for the enclosing instruction that `type: feedback` entries are MUST-grade: what is
+MUST-grade is the rule's own direction, not the negation of its exception.
+
 ## 5. Report obstacles
 
 End your output with an **Obstacles Encountered** line: setup issues, commands needing special flags,
