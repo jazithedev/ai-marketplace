@@ -4,10 +4,33 @@ Used for **single PRs** and **child PRs** of a stack (children are the review un
 is where Responsibility / Side effects matter most). The **collective PR** of a stack does
 NOT use this template — its minimal bullet body is defined in `stacked-prs.md`.
 
-The ticket key lives in the PR **title only** — never repeat it anywhere in the body.
+**A repo-defined template wins over this one.** Before using this file, look for a PR template
+the repository already mandates — `.github/pull_request_template.md`, or a "PR Body Template"
+section in `CONTRIBUTING.md`. If one exists, its sections, headings and filling rules are
+authoritative and this file is only the fallback; where they disagree, follow the repo. Check
+two or three recent merged PRs to see which convention the team actually practises, since a
+repo's written template and its habits sometimes drift (e.g. plain headings documented, emoji
+headings used).
+
+The ticket key lives in the PR **title only** — never repeat it anywhere in the body — *unless*
+the repo's own template asks for a ticket reference in the body, which several do. Then include
+it as a link, in the section that template names.
 
 No AI-attribution footers ("Generated with Claude Code", co-author trailers, emoji
 signatures) — the body ends with the last template section.
+
+**The body carries only what a reader cannot get from the diff.** Two things are therefore
+never included, in any section:
+
+- **Check results.** No test / static-analysis / linter / build outcomes, and no list of
+  commands run ("PHPUnit 16/16", "PHPStan level 8 clean", "all checks pass"). The pipeline
+  reports those, and a body claiming green rots the moment a commit lands.
+- **Restatements of the diff — including absences.** No inventory of what changed, and no
+  "no DI change", "no new dependencies", "no migration needed". A reviewer reads the code for
+  what; the body exists for why, trade-offs, and consequences that are invisible in the code.
+  Exception: a repo-defined template may explicitly ask a section to enumerate the technical
+  changes (this file's own **Side effects** does not — it wants only the incidental ones). Where
+  it does, fill that section as the repo asks and keep the *why* content out of it.
 
 ---
 
@@ -42,6 +65,10 @@ General examples:
 - Decisions, trade-offs, or context for reviewers.
 - Links to related tickets, pull requests, resources (if relevant).
 - Screenshots if UI changes are involved.
+- One short line per item — the "no paragraphs" rule above applies here too. This section
+  attracts sprawl: if a bullet needs several sentences, the explanation probably belongs in
+  the codebase's own docs, and the bullet should point at it instead.
+- Nothing that duplicates the diff or a check run (see the rules at the top).
 - For a stack's child PRs: the `Part of: …` line pointing at the collective
   (see `stacked-prs.md` — a pending note during the initial run, the collective PR URL
   after resume mode backfills it).
