@@ -19,9 +19,13 @@ reviewers read small slices while the feature lands on the base branch in one at
   get the full git-side setup plus pre-filled web-creation links
 - **Convention-aware** — resolves branch/title conventions from your repo's `CONTRIBUTING.md`,
   remembers them per repository, and falls back to a sane default; warns (never aborts) on
-  mismatch
+  mismatch. A PR template the repo mandates — `.github/pull_request_template.md`, or a
+  template section in `CONTRIBUTING.md` — overrides the plugin's own, and recent merged PRs
+  are read too, since a repo's written template and its habits drift
 - **Template-driven bodies** — Responsibility / Side effects / Additional comments, filled
-  from the actual diff and commit messages
+  from the actual diff and commit messages. A body carries only what the diff cannot show: no
+  check-run results the pipeline already reports, and no inventory of what changed — or of
+  what didn't
 - **Safe by default** — every PR is a draft; never force-pushes, amends, reorders commits, or
   touches your working branch
 
