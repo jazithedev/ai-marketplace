@@ -65,13 +65,31 @@ A finding rescued this way is usually a `[Question]`, not a MUST — high certai
 
 **Do not** apply convergence when contributors are not independent: findings from the same agent (already handled by same-agent dedup), or where one agent's prompt explicitly seeded the observation for another to check. Orchestrator-directed probes are confirmations of your own hypothesis, not independent discoveries — record them at the single agent's certainty.
 
+### G4-pre — Factual disputes are settled before classification
+
+**Run this before G4.** When contributors disagree, first ask *what kind* of disagreement it is:
+
+- **Severity dispute** — the agents agree on what the code does and differ on how much it matters. G4 handles it.
+- **Factual dispute** — the agents assert incompatible things about the repo: this convention is/is not already established, that sibling PR did/did not land, this symbol does/does not exist. **G4 must not touch this.**
+
+A factual dispute has a right answer, and it is cheap to obtain. Measure it yourself — `git merge-base --is-ancestor`, `git grep` at an explicit ref, `gh pr view --json baseRefName` — then discard the losing agents' reasoning entirely and classify the finding **once**, from the fact. Record the measurement in the finding body: the author is owed the evidence, especially when it downgrades a MUST.
+
+Why this cannot be left to G4: weakest-wins resolves a factual dispute by *opinion count*, and the mild opinion is not reliably the correct one. It gets the right answer only when the dissenting agent happens to also be the factually correct one. Invert that — two agents right, one wrong and mild — and weakest-wins silently suppresses a real MUST, with no trace in the output that a factual question was ever open. Either way the reviewer sees a confident classification resting on an unresolved fact.
+
+Observed 2026-07-31: two agents reported a strict-validation commit as already merged to `master`, making an unvalidated map a MUST-grade regression; a third measured the ancestry and found it merged into a *collective* branch instead. Weakest-wins produced the correct Question — by luck, not by rule. `git merge-base --is-ancestor` settled it in one command.
+
+If a fact genuinely cannot be measured, do not fall through to weakest-wins as a substitute: classify it a `[Question]`, state the open fact and what you tried, and let the author close it.
+
 ### G4 — Classification disagreement
+
+Applies to **severity disputes only** — anything G4-pre did not already settle on the facts.
 
 After merging, inspect `agent_classifications`:
 
 - If all agents agree → use that classification.
 - If agents disagree → pick the **weakest**: `QUESTION` beats `OPTIONAL` beats `MUST`. The reasoning: a Question means at least one agent thinks the rule's applicability is uncertain — that uncertainty should propagate to the reviewer.
 - Annotate the finding with `disagreement: "Agent X: MUST 95%, Agent Y: Question 80% — downgraded to Question"`. This annotation is shown in the Step 7 local preview only (NOT posted to GitHub).
+- When G4-pre settled a factual dispute, annotate with the measurement instead: `resolved: "Agent X asserted <claim>; measured <command> → <result>; classified <X> on the fact"`. Unlike the disagreement annotation, **this one belongs in the posted finding body**, not just the local preview.
 
 ---
 

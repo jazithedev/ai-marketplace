@@ -28,7 +28,7 @@ Community-driven collection of Claude Code plugins — skills, agents, and tools
 |---|---|---|
 | [smart-commit](plugins/smart-commit) | Productivity | Intelligent git commits with Conventional Commits, automatic change decomposition, and interactive approval |
 | [module-docs-generator](plugins/module-docs-generator) | Documentation | Generate AGENTS.md, CONTRACTS.md, and INTEGRATIONS.md for a module in a PHP modular monolith |
-| [code-review](plugins/code-review) | Quality | Multi-agent PR review with discipline checks, DDD assessment, and inline GitHub review comments |
+| [code-review](plugins/code-review) | Quality | Multi-agent PR review with discipline checks, DDD assessment, and inline GitHub review comments (`/code-review:jazi-review`) |
 | [grill-me](plugins/grill-me) | Productivity | Relentlessly interviews you about a plan or design, one question at a time, until you reach shared understanding ([source](https://github.com/mattpocock/skills/blob/main/skills/productivity/grill-me/SKILL.md)) |
 | [karpathy-guidelines](plugins/karpathy-guidelines) | Quality | Behavioral guidelines that reduce common LLM coding mistakes — simple, surgical, verifiable changes ([source](https://github.com/multica-ai/andrej-karpathy-skills/blob/main/skills/karpathy-guidelines/SKILL.md)) |
 | [create-jira-ticket](plugins/create-jira-ticket) | Productivity | Turn a short brief into a well-structured Jira ticket — Context, Expected Result, numbered full-sentence acceptance criteria, and optional QA Notes / Implementation Plan expanders; previews before creating |

@@ -1,6 +1,6 @@
 # Agent 4 — Previous Review Comments
 
-**Before you start, read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/agent-output-contract.md`.**
+**Before you start, read `${CLAUDE_PLUGIN_ROOT}/skills/jazi-review/references/agent-output-contract.md`.**
 Sections 3 and 5 apply to you: score `certainty` and `materiality` as two separate axes, and report
 obstacles at the end.
 
