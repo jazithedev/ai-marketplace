@@ -1,7 +1,7 @@
 ---
-name: code-review
-description: Reviews pull requests or local changes for PR discipline (single reason for change, size limits), code quality, and DDD compliance. Use when the user says "review this PR", "code review", "/code-review", "check this pull request", "review my changes", or similar.
-allowed-tools: Bash(gh *), Bash(git diff *), Bash(git log *), Bash(git status *), Bash(git blame *), Agent
+name: jazi-review
+description: Multi-agent code review in JaziTheDev's style — PR discipline (single reason for change, size limits), bugs and design smells, project-rules and reviewer-memory compliance, historical context, and tactical/strategic DDD. Posts findings as inline GitHub review comments. Use when the user says "review this PR", "code review", "check this pull request", "review my changes", "/jazi-review", or similar. NOTE: the bare "/code-review" command is a Claude Code built-in that shadows this skill and runs a single-pass reviewer instead — this skill is reached as "/code-review:jazi-review".
+allowed-tools: Bash(gh *), Bash(git diff *), Bash(git log *), Bash(git status *), Bash(git blame *), Bash(git show *), Bash(git grep *), Bash(git fetch *), Bash(git merge-base *), Bash(git rev-parse *), Bash(git symbolic-ref *), Bash(git update-ref *), Read, Write, Agent
 ---
 
 # Code Review Skill
@@ -13,7 +13,7 @@ Every finding must be classified as **MUST** (blocks merge), **[Optional]** (sug
 ## Skill Structure
 
 ```
-code-review/
+jazi-review/
 ├── SKILL.md                              ← You are here (orchestrator)
 ├── agents/                               ← One file per review agent
 │   ├── scope-analysis.md                 # Agent A — PR scope check + description-vs-diff
@@ -109,9 +109,9 @@ Notes:
 
 Launch both agents in a single message so they run concurrently:
 
-**Agent A** — read instructions from `${CLAUDE_PLUGIN_ROOT}/skills/code-review/agents/scope-analysis.md`, then analyze with: PR Title, Description, Changed Files, Diff.
+**Agent A** — read instructions from `${CLAUDE_PLUGIN_ROOT}/skills/jazi-review/agents/scope-analysis.md`, then analyze with: PR Title, Description, Changed Files, Diff.
 
-**Agent B** — read instructions from `${CLAUDE_PLUGIN_ROOT}/skills/code-review/agents/size-analysis.md`, then analyze with: additions, deletions, changedFiles, Changed Files, Diff.
+**Agent B** — read instructions from `${CLAUDE_PLUGIN_ROOT}/skills/jazi-review/agents/size-analysis.md`, then analyze with: additions, deletions, changedFiles, Changed Files, Diff.
 
 ### Step 3: Present discipline findings
 
@@ -147,7 +147,7 @@ Step 4 is **four** parallel collection passes:
 
 **4a. Project rules.** Use a Haiku agent to find and read CLAUDE.md / AGENTS.md files from the repository root and from directories touched by the changes. Collect these as `{rules}` for Agent 1.
 
-**4b. Reviewer auto-memory (G5).** Read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/reviewer-memory-loading.md` and follow the load procedure to produce a `{reviewer_rules}` block. Encoding rule: replace `/` with `-` in the current working directory, prepend `~/.claude/projects/`, then read the resulting directory's `MEMORY.md` and every linked memory file. Filter to `type ∈ {feedback, user}`. Pass `{reviewer_rules}` to Agents 1, 5, 8 in Step 5. If `MEMORY.md` does not exist, the block is empty.
+**4b. Reviewer auto-memory (G5).** Read `${CLAUDE_PLUGIN_ROOT}/skills/jazi-review/references/reviewer-memory-loading.md` and follow the load procedure to produce a `{reviewer_rules}` block. Encoding rule: replace `/` with `-` in the current working directory, prepend `~/.claude/projects/`, then read the resulting directory's `MEMORY.md` and every linked memory file. Filter to `type ∈ {feedback, user}`. Pass `{reviewer_rules}` to Agents 1, 5, 8 in Step 5. If `MEMORY.md` does not exist, the block is empty.
 
 **4c. Prior skill-authored reviews (G8b) — PR mode only.** Fetch existing reviews. The marker prefix is the stable identifier; the rest of the marker line may carry an optional SHA and memory mtime (added in v1.0.4):
 
@@ -163,7 +163,7 @@ In that case:
 1. If there are **author replies** on prior threads since the review was authored, fall through to **Re-review mode (S6)** to triage those replies.
 2. Otherwise, print `No changes since last review at <SHA> — skipping Phases 1 and 2.` and exit.
 
-To skip the short-circuit and force a fresh run, the reviewer passes `--force` as the second argument: `/code-review:code-review <PR> --force`.
+To skip the short-circuit and force a fresh run, the reviewer passes `--force` as the second argument: `/code-review:jazi-review <PR> --force`.
 
 Parsing the marker:
 ```bash
@@ -200,6 +200,46 @@ Build the `{prior_skill_findings}` object with both `inline` and `general` colle
 
 **4d. Stacked-PR detection (S4).** Look at `baseRefName` from Step 1. If it is NOT in `{main, master, develop, production}`, this is a stacked PR. Pass `{base_ref}` and `{default_branch}` to Agent 3 so it can run `git log <default_branch>..<base_ref>` and surface conventions established in earlier stack PRs.
 
+**4e. Verified repo facts (ground truth).** Compute a small block of measured facts **once**, here, and pass it to every agent as `{repo_facts}`.
+
+Agents reason about "what the codebase does now" constantly — is this convention already established, did a sibling PR already fix this, does this helper exist. Left to discover it alone, each agent re-derives the same topology from `git log`, they burn tokens duplicating the work, and — because `git log` on a task branch lists sibling commits that are *not* on the default branch — they can reach **opposite conclusions from the same repo**. A finding's severity then turns on which agent the orchestrator happens to believe. Measuring once removes the ambiguity for all of them.
+
+```bash
+# 1. Merge base, and what landed on the default branch since the PR branched.
+merge_base=$(git merge-base origin/{default_branch} {source_ref})
+git log --oneline "$merge_base"..origin/{default_branch} | head -30
+
+# 2. For every commit or branch an agent might mistake for landed work — the
+#    siblings of a stacked/collective epic, anything the PR body references —
+#    settle it by ancestry, never by `git log` membership:
+git merge-base --is-ancestor <sha> origin/{default_branch} \
+  && echo "<sha>: ON {default_branch}" || echo "<sha>: NOT on {default_branch}"
+
+# 3. Where a PR merged is not where it appears to have merged:
+gh pr view <PR> --json state,baseRefName,mergedAt
+
+# 4. Existence of key symbols at BOTH refs — they differ, and the difference matters:
+git grep -l "<Symbol>" {source_ref} -- <pathspec> || echo "<Symbol>: absent at PR head"
+git grep -l "<Symbol>" origin/{default_branch} -- <pathspec> || echo "<Symbol>: absent on {default_branch}"
+```
+
+Seed the symbol probes from the names the diff introduces, renames, or calls into. Keep the block short — a dozen lines of measured fact, not a survey.
+
+Emit it as `{repo_facts}` in this shape, and state plainly that these are measured, authoritative, and **override any agent's own inference**:
+
+```
+VERIFIED REPO FACTS (measured by the orchestrator — authoritative, do not re-derive):
+- Default branch: master. PR merge base: 48e9a33 (14 commits behind origin/master).
+- 1e4d33e43e8 ("validate platform keys", PR #28431): NOT on master — merged into
+  task/BI-4821-collective-competitor-metrics. Do NOT treat it as landed precedent.
+- PlatformMapper: EXISTS on origin/master, ABSENT at PR head. A grep of the PR tree
+  alone will miss it.
+```
+
+**A collective/stacked epic is the case this exists for.** A child PR reports `state: MERGED` when it merged into the *collective* branch, not into the default branch, and every task branch in the epic then shows those commits in `git log` as though they were upstream. Treating one as landed precedent turns a merge-order question into a phantom MUST-grade regression. `baseRefName` on the merged PR is what reveals the real target.
+
+If a fact cannot be measured, say so in the block (`unverified: …`) rather than omitting it — an agent that knows a thing is unknown will hedge; an agent that never hears about it will guess.
+
 When an agent — or you, in a later step — needs the actual content of a file at the PR's head SHA (typical reasons: validating that a finding's `file:line` falls inside a diff hunk before posting an inline comment, mapping a diff-line offset back to a file-line number, or verifying a referenced symbol still exists), use `gh api`, not `curl https://raw.githubusercontent.com/...`. The raw-content host is only reachable for public repos when no auth is provided, so a `curl` against a private repo silently returns an empty body and the next step quietly fails. `gh api` carries the user's token and works on both public and private repos:
 
 ```bash
@@ -216,7 +256,7 @@ Pattern-checking agents that produce structured output run on **Haiku** (cheaper
 
 For each agent, the prompt follows this pattern:
 ```
-Read your instructions from ${CLAUDE_PLUGIN_ROOT}/skills/code-review/agents/{agent-file}.md
+Read your instructions from ${CLAUDE_PLUGIN_ROOT}/skills/jazi-review/agents/{agent-file}.md
 
 {Any agent-specific context: rules, diff, PR number, etc.}
 
@@ -224,6 +264,14 @@ Reading the PR's files: the working copy may not contain them (see Step 1b). Rea
 contents at the PR head with `git show {source_ref}:<path>` and search with
 `git grep -n <pattern> {source_ref} -- <pathspec>`. Do read the full versions of the files
 you're reviewing — the diff hunks hide surrounding context.
+
+{repo_facts}
+
+The facts above were measured by the orchestrator and are authoritative. Do not re-derive them,
+and do not contradict them from your own reading of `git log` — a task branch's log lists sibling
+commits that never reached the default branch. If your finding depends on a repo fact that is not
+in that block, measure it (`git merge-base --is-ancestor`, `git grep` at an explicit ref) and
+report the command and its output alongside the finding.
 
 Diff to review:
 {diff}
@@ -235,7 +283,7 @@ into 7 prompts is pure waste.
 
 **Launch these agents simultaneously:**
 
-Every agent additionally receives `{source_ref}` from Step 1b.
+Every agent additionally receives `{source_ref}` from Step 1b and `{repo_facts}` from Step 4e.
 
 | Agent | File | Model | Needs | Notes |
 |-------|------|-------|-------|-------|
@@ -260,13 +308,13 @@ The `{reviewer_rules}` block is the output of Step 4b. Always pass it to the age
 
 ### Step 6: Aggregate, classify, and filter
 
-Read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/consolidation-rules.md` and apply the run order it specifies. The high-level sequence:
+Read `${CLAUDE_PLUGIN_ROOT}/skills/jazi-review/references/consolidation-rules.md` and apply the run order it specifies. The high-level sequence:
 
 1. Collect all findings from all agents.
 2. **Gate on certainty (two-stage)** — `certainty` is "is this observation factually true of the code", NOT "does it matter" — see Section E of `consolidation-rules.md`. Drop findings below 40; **hold** 40–79 in a pending set rather than discarding them, because independent cross-agent agreement in sub-step 5 can lift them over the bar; pass 80+ straight through. A finding that is definitely present but arguably harmless clears this gate and is settled by classification instead. Findings carrying only a legacy `confidence` field are treated as `certainty = confidence`.
 3. **Default missing classifications** — derive from `materiality`: MUST for high, OPTIONAL for medium, QUESTION for low. No finding leaves Step 6 unclassified.
 4. **Same-agent dedup** — within one agent's output, merge findings whose `(file, line)` AND `pattern` match.
-5. **Cross-agent dedup with disagreement handling (G7 + G4)** — see Section A of `consolidation-rules.md`. Two findings dedup when location matches AND descriptions share Jaccard similarity ≥ 0.5 on token bigrams AND pattern matches. On classification disagreement, pick the weakest (QUESTION beats OPTIONAL beats MUST) and annotate the finding with the disagreement (shown only in the local preview). **Independent agreement raises `certainty`** — see Section A's convergence rule; three agents arriving at the same observation separately is evidence, not noise.
+5. **Cross-agent dedup with disagreement handling (G7 + G4-pre + G4)** — see Section A of `consolidation-rules.md`. Two findings dedup when location matches AND descriptions share Jaccard similarity ≥ 0.5 on token bigrams AND pattern matches. Then split disagreements by kind: a **factual** dispute (agents assert incompatible things about the repo) is settled by measuring it yourself per **G4-pre** and classifying once from the fact, with the measurement carried into the posted body — weakest-wins must not arbitrate a question that has a right answer. Only a genuine **severity** dispute falls through to G4: pick the weakest (QUESTION beats OPTIONAL beats MUST) and annotate the finding with the disagreement (shown only in the local preview). **Independent agreement raises `certainty`** — see Section A's convergence rule; three agents arriving at the same observation separately is evidence, not noise.
 6. **Pattern consolidation (G1)** — see Section B of `consolidation-rules.md`. Group remaining findings by `(pattern, classification)`. For any group with size ≥ 2 whose `suggested_fix` shapes are identical modulo identifier substitution, merge into a single finding anchored at the lowest (file, line). The merged body lists every location.
 7. **Prevalence calibration (G3)** — see Section C of `consolidation-rules.md`. For every finding with `pattern_kind: "convention"`, run a codebase-prevalence probe via `grep` against a structurally-similar file glob. Reclassify: ≥0.8 keep MUST, 0.5–0.8 downgrade to Optional, <0.5 drop. Skip the probe for `pattern_kind ∈ {bug, project-rule, memory}`.
 7b. **Memory-premise verification (G9)** — see Section C-bis of `consolidation-rules.md`. For every finding with `pattern_kind: "memory"` whose rule body asserts a **falsifiable claim about the codebase**, verify that claim before allowing MUST. If the premise is false, downgrade to `[Optional]`, state both the rule and the contradicting measurement in the body, and raise a memory-correction candidate in Step 9. Memory rules that assert only a preference (no factual premise) are unaffected and keep their prevalence bypass.
@@ -606,7 +654,7 @@ That fallback section is the **only** legitimate reason for a "Confirming existi
 
 After Step 8 posts successfully, compare the **local preview findings** (from Step 7) with the **posted findings**. Anywhere the reviewer made a judgment call worth remembering, offer to save a memory entry.
 
-Read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/reviewer-memory-loading.md` for the write-back procedure. The signals worth surfacing:
+Read `${CLAUDE_PLUGIN_ROOT}/skills/jazi-review/references/reviewer-memory-loading.md` for the write-back procedure. The signals worth surfacing:
 
 | Signal | Memory entry shape |
 |--------|--------------------|
@@ -635,7 +683,7 @@ Memory write-back is **optional** — skipping it doesn't break anything; the re
 
 ## Re-review mode (S6)
 
-Triggered when the user runs `/code-review:code-review <PR> --since-last-review` or types something like "re-review thread N" or "re-review this PR's open threads".
+Triggered when the user runs `/code-review:jazi-review <PR> --since-last-review` or types something like "re-review thread N" or "re-review this PR's open threads".
 
 This mode skips Phases 1 and 2 entirely. It addresses author responses on the skill's prior review.
 
@@ -694,6 +742,7 @@ This mode skips Phases 1 and 2 entirely. It addresses author responses on the sk
 - **Respect the 80% threshold.** Don't include findings you aren't sure are factually present. But score `certainty` on *presence*, not on *importance* — a definitely-present nitpick is high-certainty and low-materiality, which makes it an `[Optional]`, not a dropped finding.
 - **A reviewer-memory rule is evidence, not proof.** When a memory rule's stated justification is checkable, check it. If the codebase contradicts it, say so plainly in the finding, drop to `[Optional]`, and offer to correct the memory in Step 9 — do not post a MUST built on a false premise, and do not silently discard the rule either.
 - **Deduplicate across agents.** Same issue from multiple agents → keep the most detailed, note agreement.
+- **Agents disagreeing about a fact is a measurement task, not a voting task.** When two agents assert incompatible things about the repo — a convention is already established, a sibling PR already landed, a symbol exists — go and measure it (`git merge-base --is-ancestor`, `git grep` at an explicit ref, `gh pr view --json baseRefName`), then classify once from the result and put the measurement in the finding. Never let the weakest-wins tiebreak stand in for an answer you could have looked up.
 - **PR discipline comes first.** Scope/size violations are the most important feedback.
 - **Don't nitpick style** if the project has a formatter/linter (ECS, PHP-CS-Fixer).
 - **State review scope** when not reviewing everything: "Checked only Deptrac files."
