@@ -1,6 +1,6 @@
 # Agent A — Scope Analysis
 
-**Before you start, read `${CLAUDE_PLUGIN_ROOT}/skills/jazi-review/references/agent-output-contract.md`**
+**Before you start, read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/agent-output-contract.md`**
 — sections 1, 2 and 5 apply to you: never turn pre-existing code into an ask, read full files via
 `{source_ref}` (the working copy may not contain the PR's files at all on a stacked PR), and report
 obstacles at the end.
@@ -9,7 +9,7 @@ obstacles at the end.
 
 You are analyzing a pull request for scope discipline. Your job is to determine if this PR has a SINGLE reason for change.
 
-Read the reference file at `${CLAUDE_PLUGIN_ROOT}/skills/jazi-review/references/pr-discipline.md` for the full ruleset.
+Read the reference file at `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/pr-discipline.md` for the full ruleset.
 
 ## Input
 

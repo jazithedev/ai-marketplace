@@ -19,9 +19,9 @@ Multi-agent code review skill for Claude Code. Simulates JaziTheDev's (Krzysztof
 
 ## Modes
 
-- **PR mode** — `/code-review:jazi-review #123`, `/code-review:jazi-review 123`, or `/code-review:jazi-review https://github.com/org/repo/pull/123`. Fetches the PR via `gh`, reviews the diff, and posts inline comments after your approval.
-- **Local mode** — `/code-review:jazi-review` (with no argument and no open PR for the branch). Reviews uncommitted local changes via `git diff HEAD`.
-- **Auto-detect** — `/code-review:jazi-review` chooses the mode based on `git status` and whether an open PR exists for the current branch.
+- **PR mode** — `/code-review:code-review #123`, `/code-review:code-review 123`, or `/code-review:code-review https://github.com/org/repo/pull/123`. Fetches the PR via `gh`, reviews the diff, and posts inline comments after your approval.
+- **Local mode** — `/code-review:code-review` (with no argument and no open PR for the branch). Reviews uncommitted local changes via `git diff HEAD`.
+- **Auto-detect** — `/code-review:code-review` chooses the mode based on `git status` and whether an open PR exists for the current branch.
 
 ## Installation
 
@@ -34,18 +34,17 @@ Users of this marketplace can install via:
 ## Usage
 
 ```
-/code-review:jazi-review          # auto-detect: local changes or open PR for the branch
-/code-review:jazi-review #123       # review a specific PR
-/code-review:jazi-review 123        # same — bare PR number
-/code-review:jazi-review <pr-url>   # review by URL
+/code-review:code-review          # auto-detect: local changes or open PR for the branch
+/code-review:code-review #123       # review a specific PR
+/code-review:code-review 123        # same — bare PR number
+/code-review:code-review <pr-url>   # review by URL
 ```
 
 The skill also activates automatically when you say "review this PR", "code review", "check this pull request", or "review my changes".
 
-> **Why the namespaced name?** `/code-review` is a Claude Code **built-in** command, and it shadows
-> any plugin skill of the same name — typing it runs the built-in single-pass reviewer, not this
-> skill. The skill is therefore named `jazi-review` and is reached as `/code-review:jazi-review`.
-> The plugin keeps its `code-review` name, so no reinstall is needed; a plugin update is enough.
+> **Always use the namespaced form.** `/code-review` is a Claude Code **built-in** command, and it
+> shadows any plugin skill of the same name — typing it runs the built-in single-pass reviewer, not
+> this skill. Invoke this one as `/code-review:code-review`.
 
 ## Output
 

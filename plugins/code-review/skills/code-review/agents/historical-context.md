@@ -1,6 +1,6 @@
 # Agent 3 — Historical Context
 
-**Before you start, read `${CLAUDE_PLUGIN_ROOT}/skills/jazi-review/references/agent-output-contract.md`.**
+**Before you start, read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/agent-output-contract.md`.**
 It defines rules that apply to every review agent: anchor findings only to lines this PR touches,
 read full files via `{source_ref}` rather than trusting the hunks or the working copy, score
 `certainty` and `materiality` as two separate axes, and verify a reviewer-memory rule's stated premise

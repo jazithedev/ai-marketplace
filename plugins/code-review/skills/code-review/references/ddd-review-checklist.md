@@ -112,7 +112,7 @@ This checklist is intentionally short. For most findings, the items above are en
 If you need a canonical definition of a concept (Aggregate Root, Domain Service, Invariant, Anti-Corruption Layer, Customer-Supplier, etc.) before emitting a finding, do **NOT** read the full `ddd-expert-knowledge-base.md` (54 KB). Instead run a targeted grep and read only the matched section:
 
 ```bash
-grep -i -A 30 "<concept_keyword>" ${CLAUDE_PLUGIN_ROOT}/skills/jazi-review/references/ddd-expert-knowledge-base.md
+grep -i -A 30 "<concept_keyword>" ${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/ddd-expert-knowledge-base.md
 ```
 
 Examples:

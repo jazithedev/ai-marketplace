@@ -1,6 +1,6 @@
 ---
-name: jazi-review
-description: Multi-agent code review in JaziTheDev's style — PR discipline (single reason for change, size limits), bugs and design smells, project-rules and reviewer-memory compliance, historical context, and tactical/strategic DDD. Posts findings as inline GitHub review comments. Use when the user says "review this PR", "code review", "check this pull request", "review my changes", "/jazi-review", or similar. NOTE: the bare "/code-review" command is a Claude Code built-in that shadows this skill and runs a single-pass reviewer instead — this skill is reached as "/code-review:jazi-review".
+name: code-review
+description: Multi-agent code review in JaziTheDev's style — PR discipline (single reason for change, size limits), bugs and design smells, project-rules and reviewer-memory compliance, historical context, and tactical/strategic DDD. Posts findings as inline GitHub review comments. Use when the user says "review this PR", "code review", "check this pull request", "review my changes", or similar. NOTE: invoke as "/code-review:code-review" — the bare "/code-review" is a Claude Code built-in that shadows this same-named plugin skill and runs a single-pass reviewer instead.
 allowed-tools: Bash(gh *), Bash(git diff *), Bash(git log *), Bash(git status *), Bash(git blame *), Bash(git show *), Bash(git grep *), Bash(git fetch *), Bash(git merge-base *), Bash(git rev-parse *), Bash(git symbolic-ref *), Bash(git update-ref *), Read, Write, Agent
 ---
 
@@ -13,7 +13,7 @@ Every finding must be classified as **MUST** (blocks merge), **[Optional]** (sug
 ## Skill Structure
 
 ```
-jazi-review/
+code-review/
 ├── SKILL.md                              ← You are here (orchestrator)
 ├── agents/                               ← One file per review agent
 │   ├── scope-analysis.md                 # Agent A — PR scope check + description-vs-diff
@@ -109,9 +109,9 @@ Notes:
 
 Launch both agents in a single message so they run concurrently:
 
-**Agent A** — read instructions from `${CLAUDE_PLUGIN_ROOT}/skills/jazi-review/agents/scope-analysis.md`, then analyze with: PR Title, Description, Changed Files, Diff.
+**Agent A** — read instructions from `${CLAUDE_PLUGIN_ROOT}/skills/code-review/agents/scope-analysis.md`, then analyze with: PR Title, Description, Changed Files, Diff.
 
-**Agent B** — read instructions from `${CLAUDE_PLUGIN_ROOT}/skills/jazi-review/agents/size-analysis.md`, then analyze with: additions, deletions, changedFiles, Changed Files, Diff.
+**Agent B** — read instructions from `${CLAUDE_PLUGIN_ROOT}/skills/code-review/agents/size-analysis.md`, then analyze with: additions, deletions, changedFiles, Changed Files, Diff.
 
 ### Step 3: Present discipline findings
 
@@ -147,7 +147,7 @@ Step 4 is **four** parallel collection passes:
 
 **4a. Project rules.** Use a Haiku agent to find and read CLAUDE.md / AGENTS.md files from the repository root and from directories touched by the changes. Collect these as `{rules}` for Agent 1.
 
-**4b. Reviewer auto-memory (G5).** Read `${CLAUDE_PLUGIN_ROOT}/skills/jazi-review/references/reviewer-memory-loading.md` and follow the load procedure to produce a `{reviewer_rules}` block. Encoding rule: replace `/` with `-` in the current working directory, prepend `~/.claude/projects/`, then read the resulting directory's `MEMORY.md` and every linked memory file. Filter to `type ∈ {feedback, user}`. Pass `{reviewer_rules}` to Agents 1, 5, 8 in Step 5. If `MEMORY.md` does not exist, the block is empty.
+**4b. Reviewer auto-memory (G5).** Read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/reviewer-memory-loading.md` and follow the load procedure to produce a `{reviewer_rules}` block. Encoding rule: replace `/` with `-` in the current working directory, prepend `~/.claude/projects/`, then read the resulting directory's `MEMORY.md` and every linked memory file. Filter to `type ∈ {feedback, user}`. Pass `{reviewer_rules}` to Agents 1, 5, 8 in Step 5. If `MEMORY.md` does not exist, the block is empty.
 
 **4c. Prior skill-authored reviews (G8b) — PR mode only.** Fetch existing reviews. The marker prefix is the stable identifier; the rest of the marker line may carry an optional SHA and memory mtime (added in v1.0.4):
 
@@ -163,7 +163,7 @@ In that case:
 1. If there are **author replies** on prior threads since the review was authored, fall through to **Re-review mode (S6)** to triage those replies.
 2. Otherwise, print `No changes since last review at <SHA> — skipping Phases 1 and 2.` and exit.
 
-To skip the short-circuit and force a fresh run, the reviewer passes `--force` as the second argument: `/code-review:jazi-review <PR> --force`.
+To skip the short-circuit and force a fresh run, the reviewer passes `--force` as the second argument: `/code-review:code-review <PR> --force`.
 
 Parsing the marker:
 ```bash
@@ -256,7 +256,7 @@ Pattern-checking agents that produce structured output run on **Haiku** (cheaper
 
 For each agent, the prompt follows this pattern:
 ```
-Read your instructions from ${CLAUDE_PLUGIN_ROOT}/skills/jazi-review/agents/{agent-file}.md
+Read your instructions from ${CLAUDE_PLUGIN_ROOT}/skills/code-review/agents/{agent-file}.md
 
 {Any agent-specific context: rules, diff, PR number, etc.}
 
@@ -308,7 +308,7 @@ The `{reviewer_rules}` block is the output of Step 4b. Always pass it to the age
 
 ### Step 6: Aggregate, classify, and filter
 
-Read `${CLAUDE_PLUGIN_ROOT}/skills/jazi-review/references/consolidation-rules.md` and apply the run order it specifies. The high-level sequence:
+Read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/consolidation-rules.md` and apply the run order it specifies. The high-level sequence:
 
 1. Collect all findings from all agents.
 2. **Gate on certainty (two-stage)** — `certainty` is "is this observation factually true of the code", NOT "does it matter" — see Section E of `consolidation-rules.md`. Drop findings below 40; **hold** 40–79 in a pending set rather than discarding them, because independent cross-agent agreement in sub-step 5 can lift them over the bar; pass 80+ straight through. A finding that is definitely present but arguably harmless clears this gate and is settled by classification instead. Findings carrying only a legacy `confidence` field are treated as `certainty = confidence`.
@@ -654,7 +654,7 @@ That fallback section is the **only** legitimate reason for a "Confirming existi
 
 After Step 8 posts successfully, compare the **local preview findings** (from Step 7) with the **posted findings**. Anywhere the reviewer made a judgment call worth remembering, offer to save a memory entry.
 
-Read `${CLAUDE_PLUGIN_ROOT}/skills/jazi-review/references/reviewer-memory-loading.md` for the write-back procedure. The signals worth surfacing:
+Read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/reviewer-memory-loading.md` for the write-back procedure. The signals worth surfacing:
 
 | Signal | Memory entry shape |
 |--------|--------------------|
@@ -683,7 +683,7 @@ Memory write-back is **optional** — skipping it doesn't break anything; the re
 
 ## Re-review mode (S6)
 
-Triggered when the user runs `/code-review:jazi-review <PR> --since-last-review` or types something like "re-review thread N" or "re-review this PR's open threads".
+Triggered when the user runs `/code-review:code-review <PR> --since-last-review` or types something like "re-review thread N" or "re-review this PR's open threads".
 
 This mode skips Phases 1 and 2 entirely. It addresses author responses on the skill's prior review.
 

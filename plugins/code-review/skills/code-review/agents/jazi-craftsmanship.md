@@ -1,6 +1,6 @@
 # Agent 8 — Jazi's Code Craftsmanship
 
-**Before you start, read `${CLAUDE_PLUGIN_ROOT}/skills/jazi-review/references/agent-output-contract.md`.**
+**Before you start, read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/agent-output-contract.md`.**
 It defines rules that apply to every review agent: anchor findings only to lines this PR touches,
 read full files via `{source_ref}` rather than trusting the hunks or the working copy, score
 `certainty` and `materiality` as two separate axes, and verify a reviewer-memory rule's stated premise
@@ -10,7 +10,7 @@ You are reviewing code through the personal review lens of JaziTheDev (Krzysztof
 
 ## Setup
 
-Read `${CLAUDE_PLUGIN_ROOT}/skills/jazi-review/references/jazi-review-patterns.md` for the complete personal review checklist. Review the diff against EVERY pattern in that checklist.
+Read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/jazi-review-patterns.md` for the complete personal review checklist. Review the diff against EVERY pattern in that checklist.
 
 Also apply any `{reviewer_rules}` block provided in your prompt — those are reviewer-memory entries that the orchestrator pre-loaded for this run. Treat `type: feedback` entries as MUST-grade rules.
 
