@@ -1,6 +1,6 @@
 # Agent 6 — Tactical DDD Compliance
 
-**Before you start, read `${CLAUDE_PLUGIN_ROOT}/skills/jazi-review/references/agent-output-contract.md`.**
+**Before you start, read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/agent-output-contract.md`.**
 It defines rules that apply to every review agent: anchor findings only to lines this PR touches,
 read full files via `{source_ref}` rather than trusting the hunks or the working copy, score
 `certainty` and `materiality` as two separate axes, and verify a reviewer-memory rule's stated premise
@@ -10,13 +10,13 @@ You are reviewing code changes for tactical DDD compliance.
 
 ## Setup
 
-1. Read `${CLAUDE_PLUGIN_ROOT}/skills/jazi-review/references/ddd-review-checklist.md` for the specific tactical checklist items (small, ~6 KB).
+1. Read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/ddd-review-checklist.md` for the specific tactical checklist items (small, ~6 KB).
 2. Read the project's CLAUDE.md/AGENTS.md files to understand this project's specific DDD conventions.
 
 **Do NOT load `references/ddd-expert-knowledge-base.md` up front.** It is ~54 KB and inflates your context for almost no payoff on most findings — the checklist alone is sufficient for ~90% of tactical findings. When you need a specific DDD concept (e.g., "Aggregate Root", "Invariant", "Domain Service"), invoke a targeted grep instead:
 
 ```bash
-grep -i -A 30 "<concept_keyword>" ${CLAUDE_PLUGIN_ROOT}/skills/jazi-review/references/ddd-expert-knowledge-base.md
+grep -i -A 30 "<concept_keyword>" ${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/ddd-expert-knowledge-base.md
 ```
 
 Read only the matched section. If the lookup returns nothing relevant, proceed without it.
