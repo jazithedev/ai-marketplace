@@ -154,6 +154,7 @@ class Record:
     is_draft: bool
     my_state: str
     teammate_states: dict
+    re_requested: bool = False
     flags: list = field(default_factory=list)
 
 
@@ -163,13 +164,15 @@ def _age_days(created_at: str, now: datetime) -> int:
 
 
 def compute_flags(pr: dict, my_state: str, teammate_states: dict,
-                  stale_days: int, now: datetime) -> list[str]:
+                  stale_days: int, now: datetime, re_requested: bool) -> list[str]:
     flags: list[str] = []
     if pr.get("isDraft"):
         flags.append("draft")
     reviews = pr.get("reviews") or []
     if pr.get("state") == "OPEN" and not reviews and _age_days(pr["createdAt"], now) > stale_days:
         flags.append("stale")
+    if re_requested:
+        flags.append("re-requested")
     if any(state == "APPROVED" for state in teammate_states.values()):
         flags.append("teammate-approved")
     if my_state == "CHANGES_REQUESTED" or any(
@@ -182,6 +185,7 @@ def compute_flags(pr: dict, my_state: str, teammate_states: dict,
 def build_record(pr: dict, me: str, members: frozenset[str],
                  stale_days: int, now: datetime) -> Record:
     my_state, teammate_states = compute_states(pr, me, members)
+    re_requested = my_state != "NONE" and me in _requested_names(pr)
     return Record(
         number=pr["number"],
         title=pr["title"],
@@ -192,7 +196,8 @@ def build_record(pr: dict, me: str, members: frozenset[str],
         is_draft=bool(pr.get("isDraft")),
         my_state=my_state,
         teammate_states=teammate_states,
-        flags=compute_flags(pr, my_state, teammate_states, stale_days, now),
+        re_requested=re_requested,
+        flags=compute_flags(pr, my_state, teammate_states, stale_days, now, re_requested),
     )
 
 
@@ -216,8 +221,9 @@ def select(records: list[Record], mode: str, include_drafts: bool, ball_lookup) 
     """Filter records by mode, draft status, and (for attention mode) ball position.
 
     Modes:
-    - "not_acted": keep only records with my_state == "NONE"
-    - "attention": keep "NONE" records plus records with my_state in {COMMENTED, CHANGES_REQUESTED}
+    - "not_acted": keep records with my_state == "NONE", plus records the author has
+                   re-requested from me since my last review
+    - "attention": the "not_acted" set plus records with my_state in {COMMENTED, CHANGES_REQUESTED}
                    where ball_lookup(record) returns True
     - "full": keep all records
 
@@ -228,7 +234,7 @@ def select(records: list[Record], mode: str, include_drafts: bool, ball_lookup) 
     for rec in records:
         if rec.is_draft and not include_drafts:
             continue
-        if mode == "full" or rec.my_state == "NONE":
+        if mode == "full" or rec.my_state == "NONE" or rec.re_requested:
             kept.append(rec)
             continue
         if mode == "attention" and rec.my_state in ("COMMENTED", "CHANGES_REQUESTED") and ball_lookup(rec):
