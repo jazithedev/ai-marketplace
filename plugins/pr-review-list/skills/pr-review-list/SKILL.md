@@ -40,7 +40,9 @@ Produce a focused, deterministic list of PRs the user still needs to review.
 
 ## Flags to offer
 
-- default → not-yet-acted PRs only.
+- default → PRs you have not acted on, plus any the author **re-requested** from you
+  since your last review (GitHub keeps your old review state, so these are otherwise
+  invisible — they carry a `re-requested` flag).
 - `--attention` → also PRs you commented on where the author has since replied.
 - `--full-board` → every matched PR with a status column.
 - `--include-drafts`, `--include-closed` → widen the set.

@@ -7,7 +7,10 @@ deterministic triage that:
   reviewers, hiding them from naive filters);
 - drops **other-team request pollution** (`review-requested:<you>` expands to every team
   you're on);
-- flags `stale`, `draft`, `teammate-approved`, and `changes-requested` PRs.
+- catches PRs the author **re-requested** from you after you reviewed (GitHub never
+  clears your old `CHANGES_REQUESTED`/`APPROVED` state, so a re-request is the only
+  signal the ball is back with you);
+- flags `stale`, `draft`, `re-requested`, `teammate-approved`, and `changes-requested` PRs.
 
 ## Usage
 
@@ -28,7 +31,7 @@ them silently.
 
 | Flag | Effect |
 |------|--------|
-| _(default)_ | PRs you have not yet acted on. |
+| _(default)_ | PRs you have not yet acted on, plus ones re-requested from you since your last review. |
 | `--attention` | Also PRs you commented on where the author has replied. |
 | `--full-board` | Every matched PR with a status column. |
 | `--include-drafts` / `--include-closed` | Widen the set. |
