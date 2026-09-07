@@ -1,9 +1,9 @@
 ---
-name: pr-review-list
-description: List the GitHub pull requests awaiting your code review for a repository and team. Use when the user asks "what PRs do I need to review", "my review queue", "PRs waiting on me", "/pr-review-list", or wants a triaged list of review-requested PRs — including ones a teammate already reviewed (which GitHub hides from request filters). Resolves the repo from the working directory (or one the user names) and the team(s) from per-repository memory.
+name: to-review-list
+description: List the GitHub pull requests awaiting your code review for a repository and team. Use when the user asks "what PRs do I need to review", "my review queue", "PRs waiting on me", "/pull-request:to-review-list", or wants a triaged list of review-requested PRs — including ones a teammate already reviewed (which GitHub hides from request filters). Resolves the repo from the working directory (or one the user names) and the team(s) from per-repository memory.
 ---
 
-# pr-review-list
+# to-review-list
 
 Produce a focused, deterministic list of PRs the user still needs to review.
 
@@ -27,7 +27,7 @@ Produce a focused, deterministic list of PRs the user still needs to review.
    slugs and the org they apply to.
 3. **Run the script:**
    ```bash
-   python3 "$CLAUDE_PLUGIN_ROOT/skills/pr-review-list/scripts/pr_review_list.py" \
+   python3 "$CLAUDE_PLUGIN_ROOT/skills/to-review-list/scripts/to_review_list.py" \
      [--repo <owner/repo>] --team <slug> [--team <slug> …] \
      [--exclude-team <slug> …] [--attention|--full-board] \
      [--include-drafts] [--include-closed]

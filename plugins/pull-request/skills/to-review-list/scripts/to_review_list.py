@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""pr-review-list — list PRs awaiting the invoking user's code review.
+"""to-review-list — list PRs awaiting the invoking user's code review.
 
 Pure/deterministic given its arguments. All GitHub access goes through the
 single `_gh` subprocess wrapper (the only I/O boundary). No config file: team
@@ -243,7 +243,7 @@ def select(records: list[Record], mode: str, include_drafts: bool, ball_lookup) 
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="pr-review-list", description=__doc__.splitlines()[0])
+    p = argparse.ArgumentParser(prog="to-review-list", description=__doc__.splitlines()[0])
     p.add_argument("--team", action="append", required=True, metavar="SLUG",
                    help="In-scope team slug (repeatable).")
     p.add_argument("--exclude-team", action="append", default=[], metavar="SLUG",
