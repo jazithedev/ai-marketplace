@@ -19,7 +19,7 @@ Multi-agent code review skill for Claude Code. Simulates JaziTheDev's (Krzysztof
 
 ## Modes
 
-- **PR mode** — `/code-review:code-review #123`, `/code-review:code-review 123`, or `/code-review:code-review https://github.com/org/repo/pull/123`. Fetches the PR via `gh`, reviews the diff, and posts inline comments after your approval.
+- **PR mode** — `/code-review:code-review #123`, `/code-review:code-review 123`, or `/code-review:code-review https://github.com/org/repo/pull/123`. Fetches the PR via `gh`, reviews the diff, and posts inline comments — signed immediately when the verdict is a clean approval, otherwise left as a pending draft for you to submit.
 - **Local mode** — `/code-review:code-review` (with no argument and no open PR for the branch). Reviews uncommitted local changes via `git diff HEAD`.
 - **Auto-detect** — `/code-review:code-review` chooses the mode based on `git status` and whether an open PR exists for the current branch.
 
@@ -62,7 +62,12 @@ Reviewer preferences saved in Claude Code's auto-memory are applied as additiona
 
 A memory rule's **carve-out is permission, never a demand**. Most such rules are subtractive ("remove narrative PHPDoc, but keep array-shape annotations"), and the exception clause exempts code from the rule rather than creating a rule of its own — so the skill flags prose a PR *adds*, never prose a PR *deletes*. Relatedly, the skill never asks for documentation to be added or restored: absent documentation is not a finding, and a constraint worth stating is reported as something to express in code (a value object, a guard clause, a named argument, a named test) rather than in a paragraph.
 
-In PR mode, the skill previews the full review locally first and asks for explicit approval (`yes` / `no` / `edit`) before posting anything to GitHub. The review event is computed automatically: `REQUEST_CHANGES` if any `MUST` or `[Question]` is present, otherwise `APPROVE`.
+In PR mode the review event is computed automatically: `REQUEST_CHANGES` if any `MUST` or `[Question]` is present, otherwise `APPROVE`. That verdict also decides how the review lands on GitHub:
+
+- **`APPROVE`** — posted for you straight away. A clean review has nothing for you to weigh, so there is nothing to confirm.
+- **anything else** — created as a **pending draft**. The inline comments are attached but published to nobody; you read them on the PR's *Files changed* tab, edit or drop individual ones, and submit with the event you settle on.
+
+Say so up front ("review it and post it") to publish immediately regardless, or ask to see it first ("show me before posting") to get the old `yes` / `no` / `edit` preview gate back.
 
 ## Requirements
 
