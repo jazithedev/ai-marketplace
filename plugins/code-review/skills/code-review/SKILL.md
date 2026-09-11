@@ -160,8 +160,9 @@ gh api repos/{owner}/{repo}/pulls/{pr}/reviews --paginate \
 
 In that case:
 
-1. If there are **author replies** on prior threads since the review was authored, fall through to **Re-review mode (S6)** to triage those replies.
-2. Otherwise, print `No changes since last review at <SHA> — skipping Phases 1 and 2.` and exit.
+1. If that most recent skill-authored review is still `PENDING`, it is an unsubmitted draft from an earlier run. Print `A review drafted at <SHA> is still pending your submission — https://github.com/{owner}/{repo}/pull/{pr}/files` and exit. Do not start a second one: GitHub allows one pending review per user per PR, and the existing draft may already carry the reviewer's own edits.
+2. If there are **author replies** on prior threads since the review was authored, fall through to **Re-review mode (S6)** to triage those replies.
+3. Otherwise, print `No changes since last review at <SHA> — skipping Phases 1 and 2.` and exit.
 
 To skip the short-circuit and force a fresh run, the reviewer passes `--force` as the second argument: `/code-review:code-review <PR> --force`.
 
@@ -450,14 +451,28 @@ Issues the review agents hit while doing their work — surfaced so the next ste
 {1-2 sentences: X required changes, Y suggestions, Z questions}
 ```
 
-**In PR mode**: compute the planned review event using the rule in Step 8 (`REQUEST_CHANGES` if any MUST or Question, otherwise `APPROVE`), state it explicitly, then ask **"Post this review with status `{event}`? (yes/no/edit)"**
+**In PR mode**: compute the planned review event using the rule in Step 8 (`REQUEST_CHANGES` if any MUST or Question, otherwise `APPROVE`) and state it explicitly. The computed event then decides **how** the review reaches GitHub — the reviewer is not asked to confirm:
+
+- **`APPROVE`** → **post it yourself, immediately**, using the split format in Step 8. A clean review carries nothing for the reviewer to weigh, so stopping to ask buys nothing. Print the resulting `html_url` and continue to Step 9.
+- **anything else** (`REQUEST_CHANGES`, `COMMENT`) → **do not submit.** Create the review as a **pending draft** (Step 8, *Submitting a pending draft*) and hand it back for checking:
+
+  ```
+  Drafted as PENDING — {n} inline comments, planned status {event}: {reason it is not APPROVE}.
+  Nobody can see it until you submit it: https://github.com/{owner}/{repo}/pull/{pr}/files
+  ```
+
+  A pending review is private to its author, so the reviewer reads it on the PR, edits or deletes individual comments there, and submits it with whatever event they settle on.
+
+**Exception — publish immediately.** If the reviewer said up front to publish regardless ("review it and post it", "publish straight away", "don't draft it"), skip the draft and submit with the computed event, whatever it is. Only an explicit instruction counts — silence means draft.
+
+**The interactive gate is still available on request.** If the reviewer asks to see it first ("show me before posting", "let me edit it"), present the preview and ask **"Post this review with status `{event}`? (yes/no/edit)"**
 - **yes** → Post using the split format described in Step 8.
 - **no** → Stop.
 - **edit** → Let the user modify the local output, then post using the split format in Step 8. The `edit` flow MUST collect, for each Question, the reviewer's `k / r / d` choice (Questions marked `r` are dropped from posting and their reasoning is held for Step 9 memory write-back). Recompute the event after edits, since adding or removing MUSTs/Questions flips the verdict.
 
 **In Local mode**: ask **"Would you like me to help fix any of these issues?"**
 
-### Step 8: Post the review (PR mode, on "yes" or "edit")
+### Step 8: Post the review (PR mode)
 
 The single-comment-dump approach is **not** what we want. GitHub already supports inline review comments — use them. A reviewer reading the PR should see each finding next to the code it's about, not have to scroll a wall of text and resolve file:line references mentally.
 
@@ -579,7 +594,7 @@ Pick the `event` value based on what's being posted, after the inline/general bu
 
 Compute this **after** validation/demotion, not before, since a MUST that gets demoted to General Findings (because its line isn't in the diff) still counts toward `REQUEST_CHANGES`.
 
-GitHub forbids self-approving your own PR. If the `gh` user is the PR author and you computed `APPROVE`, the POST will return 422; in that case, retry with `event: COMMENT` and tell the user the review was posted unsigned because GitHub blocks self-approval.
+GitHub forbids self-approving your own PR. If the `gh` user is the PR author and you computed `APPROVE`, the POST will return 422; in that case, retry with `event: COMMENT` and tell the user the review was posted unsigned because GitHub blocks self-approval. Post it rather than drafting it — the draft route exists for reviews the reviewer has to weigh, and this one was computed clean; only the signature is missing.
 
 #### Submitting
 
@@ -612,6 +627,21 @@ If the POST fails:
 
 When the POST succeeds, the response includes an `html_url`. Print it so the user can jump straight to their review.
 
+#### Submitting a pending draft
+
+When Step 7 routes to the draft path, the payload is byte-for-byte the same — **except that the `event` field is omitted entirely**. A review POST carrying no `event` is created in GitHub's `PENDING` state: every inline comment is attached, nothing is published, and the reviewer submits it from the PR's *Files changed* tab, choosing the event themselves.
+
+```bash
+gh api repos/{owner}/{repo}/pulls/{pr}/reviews \
+  --method POST \
+  --input /tmp/review.json    # same JSON as above, minus the "event" key
+```
+
+- **Omit the key.** `"event": null` and `"event": "PENDING"` are both rejected — the field must be absent.
+- The response's `state` is `PENDING`, and its `html_url` anchors a review nobody can open yet. Give the reviewer `https://github.com/{owner}/{repo}/pull/{pr}/files` instead, which is where the draft is editable and submittable.
+- **One pending review per user per PR.** A 422 naming an existing pending review means the reviewer has an unsubmitted draft of their own — possibly from an earlier run of this skill. Never delete it to make room. Report it with its URL and stop.
+- Report the computed event alongside the draft. It is the recommendation the reviewer acts on when they submit; it is not recorded on GitHub until they do.
+
 #### Posting reactions and replies (Existing Threads bucket)
 
 These are separate API calls — not part of the batched review POST. Run them **before** the main review POST so a failure here can fall back to the body before the main submission goes out.
@@ -639,20 +669,26 @@ where `/tmp/reply-{comment_id}.json` is a JSON file you wrote with `Write` conta
 
 **Do not append the auto-generation notice to threaded replies or reactions.** The notice belongs on the top-level review body only.
 
-**Approval gate.** Never auto-post reactions or replies. The Step 7 "Confirmations of Existing Threads" section is the user-visible preview; the same `yes` / `no` / `edit` answer that approves the main review approves the planned reactions and replies. On `edit`, let the user strike specific entries (e.g., "drop the reply on comment X, react instead", "drop the react on comment Y entirely").
+**Routing.** Reactions and replies go out on the same route the review itself took in Step 7:
+
+- **Auto-approved review** → post them, in the order above, before the review POST.
+- **Pending draft** → post **nothing** on the threads. A reaction or reply is published the instant it is sent, which would leak the review while the draft is still unread. Fold every confirmation into the pending review's body under a `## Confirming existing review threads` section, formatted exactly as the Step 7 preview rendered it, and tell the reviewer the confirmations are in the body because the review is unpublished. They go out as real reactions and replies only if the reviewer asks for them after submitting.
+- **Interactive gate** (reviewer asked to see it first) → the same `yes` / `no` / `edit` answer that approves the main review approves the planned reactions and replies. On `edit`, let the user strike specific entries (e.g., "drop the reply on comment X, react instead", "drop the react on comment Y entirely").
 
 **Harness denial fallback.** Some Claude Code harness configurations refuse writes related to "posting on a PR you didn't author" with the denial reason *External System Writes*. When that happens for a reaction or reply:
 - Don't silently drop the confirmation.
 - Move the affected entry into the top-level review body under a fallback section titled `## Confirming existing review threads`, formatted exactly as the local Step 7 preview was rendered.
 - Tell the user: "harness blocked posting on threads {comment_ids}; folded into the top-level body instead."
 
-That fallback section is the **only** legitimate reason for a "Confirming existing review threads" heading to appear in the top-level body. In normal operation it never appears.
+A harness denial and the pending-draft route above are the **only** legitimate reasons for a "Confirming existing review threads" heading to appear in the top-level body. On a submitted review it never appears.
 
 ---
 
 ### Step 9: Memory write-back (S3)
 
 After Step 8 posts successfully, compare the **local preview findings** (from Step 7) with the **posted findings**. Anywhere the reviewer made a judgment call worth remembering, offer to save a memory entry.
+
+The two sets only differ when the reviewer used the interactive gate. On the auto-approve route nothing was corrected, and on the draft route nothing is published yet — the reviewer's edits happen on GitHub, after this run ends. In both cases there are no candidates, so Step 9 produces nothing and says nothing; do not invent signals to fill it.
 
 Read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/reviewer-memory-loading.md` for the write-back procedure. The signals worth surfacing:
 
@@ -733,7 +769,7 @@ This mode skips Phases 1 and 2 entirely. It addresses author responses on the sk
 
 ## Important Rules
 
-- **Never auto-post.** Always show findings locally first and get explicit approval.
+- **Auto-post a clean approval; draft everything else.** A computed `APPROVE` is posted without asking. Any other event is created as a `PENDING` draft for the reviewer to check and submit — never submitted on their behalf, unless they explicitly asked for immediate publication.
 - **Classify every finding.** MUST / [Optional] / [Question]. Never leave a finding unclassified.
 - **Explain WHY for MUST findings.** Every required change needs a reason and a concrete code alternative.
 - **Acknowledge good work.** Positive observations matter.
