@@ -101,6 +101,44 @@ them silently.
 
 Read-only: never posts, approves, or comments.
 
+## My PRs list
+
+A status board of the open pull requests **you** authored — the counterpart to the
+to-review list. It reports state and never ranks the rows:
+
+- covers **every repository** you have access to by default, grouped per repo (`--repo` /
+  `--org` narrow it);
+- groups **stacked chains** under their parent, indented in merge order, including a
+  placeholder row for a base branch whose own PR is not open yet (an unraised collective
+  branch);
+- shows the **review decision** with who gave it or who is still being waited on, so a
+  push that dismissed an approval reads as `review-required`, not `approved`;
+- marks checks `(stale)` next to `CONFLICTS`, because a conflicting PR never receives new
+  check runs and its green tick is a leftover.
+
+### Requirements
+
+- `gh` CLI, authenticated (`gh auth login`).
+- Python 3.10+.
+
+### Usage
+
+```
+/pull-request:my-prs-list
+```
+
+No configuration and nothing to remember — `author:@me` is self-scoping.
+
+| Flag | Effect |
+|------|--------|
+| _(default)_ | Every open PR you authored, in every repository, drafts included. |
+| `--repo OWNER/NAME` | Only this repository. |
+| `--org SLUG` | Only this organisation (repeatable). |
+| `--json` | Flat PR list carrying `parent`, `depth` and `ticket`. |
+
+One GraphQL call fetches the whole board, re-queried while GitHub still reports merge
+state as `UNKNOWN`. Read-only: never pushes, merges, comments, or requests review.
+
 ## Installation
 
 Users of this marketplace can install via:
@@ -109,5 +147,5 @@ Users of this marketplace can install via:
 /plugin install pull-request@ai-marketplace
 ```
 
-Or manually copy `skills/create-pull-request/` and/or `skills/to-review-list/` to
-`~/.claude/skills/`.
+Or manually copy `skills/create-pull-request/`, `skills/to-review-list/` and/or
+`skills/my-prs-list/` to `~/.claude/skills/`.
