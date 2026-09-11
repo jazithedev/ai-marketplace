@@ -33,7 +33,7 @@ Community-driven collection of Claude Code plugins — skills, agents, and tools
 | [karpathy-guidelines](plugins/karpathy-guidelines) | Quality | Behavioral guidelines that reduce common LLM coding mistakes — simple, surgical, verifiable changes ([source](https://github.com/multica-ai/andrej-karpathy-skills/blob/main/skills/karpathy-guidelines/SKILL.md)) |
 | [create-jira-ticket](plugins/create-jira-ticket) | Productivity | Turn a short brief into a well-structured Jira ticket — Context, Expected Result, numbered full-sentence acceptance criteria, and optional QA Notes / Implementation Plan expanders; previews before creating |
 | [create-gitlab-work-item](plugins/create-gitlab-work-item) | Productivity | Turn a short brief into a well-structured GitLab work item (Issue, Incident, Task, or Test case) via the glab CLI — Context, Expected Result, GIVEN/WHEN/THEN criteria, and optional QA Notes / Implementation Plan as collapsible details; previews before creating |
-| [pull-request](plugins/pull-request) | Productivity | Create draft pull requests from the commits on your branch — a single PR or a stacked chain under a collective branch; GitHub and GitLab support, full plan preview before anything is created. Also lists the GitHub PRs awaiting your review (`/pull-request:to-review-list`) |
+| [pull-request](plugins/pull-request) | Productivity | Create draft pull requests from the commits on your branch — a single PR or a stacked chain under a collective branch; GitHub and GitLab support, full plan preview before anything is created. Also lists the GitHub PRs awaiting your review (`/pull-request:to-review-list`) and boards the open PRs you authored with their review status (`/pull-request:my-prs-list`) |
 
 ## Contributing
 
