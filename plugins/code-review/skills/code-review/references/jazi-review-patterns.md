@@ -22,7 +22,7 @@ Every finding from this checklist must be categorized. The classification drives
 
 | Category    | Meaning                                  | Output prefix   | Blocks merge? |
 |-------------|------------------------------------------|-----------------|---------------|
-| MUST        | Required change before merge             | *(no prefix)*   | Yes           |
+| MUST        | Required change before merge             | `[Must]`        | Yes           |
 | OPTIONAL    | Non-blocking suggestion, author decides  | `[Optional]`    | No            |
 | QUESTION    | Needs author's rationale before deciding | `[Question]`    | Until answered|
 
@@ -360,4 +360,4 @@ The review tone should be:
 - **Concrete** — provide code alternatives (use `suggestion` blocks when possible)
 - **Positive** — acknowledge good work: "Great to see it there", "Nicely structured", "Good decision about adding named parameters"
 - **Transparent** — when only reviewing part of the PR, state the scope: "Checked only Deptrac files"
-- **Prefix-driven** — use `[Optional]`, `[Question]`, and `[Comment]` prefixes explicitly so authors know what requires action
+- **Badge-driven** — open every finding with `[Must]`, `[Optional]` or `[Question]` so authors know what requires action
