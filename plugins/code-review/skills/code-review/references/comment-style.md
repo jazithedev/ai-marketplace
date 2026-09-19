@@ -65,6 +65,9 @@ In practice:
 | Why | often | sometimes | seldom |
 | Footer | always | always | always |
 
+A General Finding is the one exception: its templates carry the certainty inline, as the leading
+`[{certainty}%]`, instead of a separate footer line.
+
 ### Subject
 
 One line, under about fifteen words. It states the finding, not the topic. A reader scanning thirty
@@ -209,9 +212,9 @@ The comment:
 ````markdown
 **🔴 [Must]** — The oversized-campaign branch reports `remaining: 0`, so the UI tells the customer something false
 
-This branch never asks the limiter how much budget is left. It always reports `0`. The UI then tells
-the customer they used their whole allowance today. A customer who has sent nothing is told something
-false, and waiting 24 hours will not help them.
+This branch never asks the limiter how much budget is left, so it always reports `0`. The UI then
+tells the customer they used their whole allowance today. That is false for a customer who has sent
+nothing, and waiting 24 hours will not help them.
 
 **Suggested fix:**
 ```php
@@ -221,7 +224,7 @@ return $this->deny($customerId, $tier, $recipients, $limit, $this->counter->rema
 <details>
 <summary>Why</summary>
 
-The `0` is passed on unchanged. It goes from `deny()` into `SendQuotaExceededException::$remaining`,
+`deny()` passes the `0` on unchanged. It travels into `SendQuotaExceededException::$remaining`,
 then through `HandlesSendQuotaRefusal` into `data.remaining`, and finally into
 `dailySendLimitMessage()`.
 

@@ -351,7 +351,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/comment-style.md` befo
 
 For each finding:
 - If G1 appended a `Locations to fix:` list to `body`, **remove it before splitting**. It is an instruction, not an argument, and it renders outside the fold from the finding's `consolidated_locations` array. Left in `body` it would be folded away, which `comment-style.md` § 2 forbids.
-- Split the remaining `body` into **`problem`** — 1–3 sentences, under 60 words, saying what is wrong and what happens because of it — and **`why`**, holding everything else.
+- Split the remaining `body` into **`problem`** and **`why`**. `comment-style.md` § 2 sets what belongs in each and how long the problem may run; it is the only place those limits are written, so they cannot drift from the guide.
 - Rewrite both under the plain-English rules in `comment-style.md` § 3.
 - Return `suggested_fix` as well. Keep it as code wherever code says it, and compress a block over 10 lines with `// …`. It renders outside the fold, so its length is what the reader pays.
 - Set `why` to `null` when it would only restate the subject, the problem or the fix. An empty fold is worse than no fold.
@@ -368,7 +368,7 @@ Read ${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/comment-style.md, secti
 You are reformatting code-review findings. Each arrives as one block of argument. Split it so the reader gets the verdict immediately and the evidence only if they want it.
 
 For each input finding return:
-- "problem": 1-3 sentences, under 60 words. What is wrong, and what happens because of it. It must stand alone: a reader who sees only the subject and this still knows what is broken. No call chains, no measurements, no prior-review history, no rejected alternatives - those are evidence.
+- "problem": what is wrong, and what happens because of it, within the length section 2 sets. It must stand alone: a reader who sees only the subject and this still knows what is broken. No call chains, no measurements, no prior-review history, no rejected alternatives - those are evidence.
 - "why": everything else from the body, rewritten. Use null if nothing is left that the subject, problem or suggested_fix has not already said.
 - "suggested_fix": the input fix, kept as code wherever code says it. Compress a fenced block over 10 lines with `// ...`. Return it unchanged when there is nothing to compress. When a snippet itself contains a fenced block, open the outer fence with four backticks - a three-backtick outer fence is closed early and swallows everything after it.
 
@@ -616,8 +616,6 @@ Use the badge that matches the classification:
 - `**🔴 [Must]**` for required changes
 - `**🟡 [Optional]**` for suggestions
 - `**🔵 [Question]**` for questions
-
-All three are bracketed and carry a single leading capital. Keep them byte-identical across every comment.
 
 Which of the four parts a given finding carries, when to drop one, and what belongs inside the fold are settled in `comment-style.md` § 2. Do not restate those rules here. A single copy is what stops the two from drifting apart.
 
