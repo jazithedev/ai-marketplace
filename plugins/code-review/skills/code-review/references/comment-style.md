@@ -96,8 +96,35 @@ When the fix is structural and code would be misleading, describe it in **at mos
 (about forty words). If you genuinely cannot say what to do, drop the section rather than filling it
 with hedging — but ask yourself first whether the finding is really a `[Question]`.
 
-If consolidation gave the finding a **Locations to fix** list, it goes directly under the fix, still
-outside the Why. It is an instruction, not an argument.
+**When the snippet itself contains a fenced block, open the outer fence with four backticks.** A
+three-backtick outer fence is closed by the first bare three-backtick line inside it. Everything after
+that point — the rest of the fix, the whole `Why` fold, the footer — is swallowed into a code block.
+The comment still posts and nothing reports an error, so the first sign of trouble is a comment that
+renders as a wall of literal text with no fold. This is measured, not theoretical: it happened to a
+real `[Must]` comment whose fix demonstrated a markdown template.
+
+Outer four, inner three:
+
+`````text
+````markdown
+**Suggested fix:**
+```php
+$x = 1;
+```
+````
+`````
+
+The same applies to this file. The rule holds wherever a fenced block nests, which is why every
+example in § 4 opens with four backticks.
+
+If consolidation gave the finding a **Locations to fix** list, render it from the finding's
+`consolidated_locations` array directly under the fix, still outside the Why. It is an instruction,
+not an argument:
+
+```markdown
+**Locations:**
+- `{file}:{line}` — `{identifier}`
+```
 
 ### Why — optional, and genuinely optional
 
