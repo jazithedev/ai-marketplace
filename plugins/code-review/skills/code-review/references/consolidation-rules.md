@@ -234,7 +234,7 @@ _This code review was made automatically by Krzysztof Trzos Code Review AI Skill
 - `prior_skill_findings.inline` — one entry per inline comment with `{comment_id, path, line, signature, classification, resolved}`
 - `prior_skill_findings.general` — one entry per General Finding parsed from the body with `{review_id, signature, classification}`
 
-Both collections use the same signature normalisation: lowercase, badge emoji stripped (`🔴 / 🟡 / 🔵`), leading classification token (`must / optional / question`) and surrounding punctuation stripped, **square brackets included**. Bracketing the token is a presentation change this skill made partway through its life, so `**🔴 MUST** — x` and `**🔴 [Must]** — x` must normalise to the same key; if they don't, the next review stops recognising its own prior comments and re-posts all of them. The result is a topic key like `add // arrange / // act / // assert section comments to every test method`.
+Both collections use the signature normalisation defined in `agents/previous-comments.md` step 2, including the reason it strips square brackets. Keep it stated there only — this file consumes that step's output rather than re-implementing it.
 
 ### Indexes
 
