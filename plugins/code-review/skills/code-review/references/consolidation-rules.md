@@ -357,7 +357,7 @@ An agent that emits only a legacy `confidence` is handled as `certainty = confid
 
 ## Output shape after Step 6
 
-After all consolidation passes, each finding in the cleaned list has the following shape (used by Step 7 preview and Step 8 posting):
+After all consolidation passes, each finding in the cleaned list has the following shape. Step 7's pre-pass 7A then splits `body` into `problem` (1–3 sentences) and `why` (the rest, or `null`), keeping the original as `body_raw`; the preview and the posted comment are rendered from those. See `comment-style.md` for what belongs in each.
 
 ```
 {
@@ -371,7 +371,7 @@ After all consolidation passes, each finding in the cleaned list has the followi
   },
   "file": "<path>",
   "line": <int>,
-  "description": "<short title>",
+  "description": "<short title — rendered as the comment's subject line>",
   "body": "<full body including any Locations-to-fix list>",
   "pattern": "<pattern name>",
   "pattern_kind": "bug" | "convention" | "design" | "project-rule" | "memory",

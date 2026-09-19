@@ -54,7 +54,8 @@ For every finding the skill produces:
 - **Certainty** — is the observation factually true of the code? Findings below 80 are filtered out. Scored separately from importance, so a definitely-present nitpick becomes an `[Optional]` instead of being dropped, and a serious-but-speculative hunch doesn't post as a `MUST`
 - **Materiality** — how much it matters, which is what drives the classification
 - **File and line** — every inline-postable finding points at a real `file:line` **that this PR adds or modifies**; pre-existing violations are context, never an ask
-- **Why** and **Suggested fix** — required for every `MUST` finding
+- **Suggested fix** — present whenever there is something concrete to propose, which is nearly always for a `MUST`
+- **Why** — the full argument, folded into a collapsed `<details>` block so it costs nothing to skip. Included when it carries evidence the problem and the fix have not already given, and dropped when it would only repeat them
 
 Findings are read against the PR head, fetched into a local ref, so reviews work on **stacked PRs** whose files don't exist on the branch you have checked out.
 
