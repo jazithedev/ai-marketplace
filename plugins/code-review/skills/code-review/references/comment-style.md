@@ -50,12 +50,14 @@ is a sentence that gets skipped.
 _Certainty: {N}% · Pattern: {name} · Agents: {which agreed}_
 ````
 
-Badges: `**🔴 MUST**`, `**🟡 [Optional]**`, `**🔵 [Question]**`.
+Badges: `**🔴 [Must]**`, `**🟡 [Optional]**`, `**🔵 [Question]**`. Always in square
+brackets, always a single leading capital. Three badges that look alike are three badges the eye can
+sort without reading them.
 
 **Every badge uses this same skeleton.** A section with nothing to put in it is dropped, not padded.
 In practice:
 
-| Section | MUST | [Optional] | [Question] |
+| Section | [Must] | [Optional] | [Question] |
 |---|---|---|---|
 | Subject | always | always | always |
 | Problem | always | always | always — state what is unclear |
@@ -165,7 +167,7 @@ in § 4 are the exception: those are comment bodies, so they meet every rule bel
 
 ## 4. Worked examples
 
-**Example A — a MUST carrying a long chain of evidence.**
+**Example A — a `[Must]` carrying a long chain of evidence.**
 
 The finding as an agent hands it over (excerpt):
 
@@ -178,7 +180,7 @@ The finding as an agent hands it over (excerpt):
 The comment:
 
 ````markdown
-**🔴 MUST** — The oversized-campaign branch reports `remaining: 0`, so the UI tells the customer something false
+**🔴 [Must]** — The oversized-campaign branch reports `remaining: 0`, so the UI tells the customer something false
 
 This branch never asks the limiter how much budget is left. It always reports `0`. The UI then tells
 the customer they used their whole allowance today. A customer who has sent nothing is told something

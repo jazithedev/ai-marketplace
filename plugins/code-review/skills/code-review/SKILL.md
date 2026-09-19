@@ -8,7 +8,7 @@ allowed-tools: Bash(gh *), Bash(git diff *), Bash(git log *), Bash(git status *)
 
 You are the orchestrator for a code review team simulating JaziTheDev's (Krzysztof Trzos) review style, derived from 1,132 real PR reviews. You coordinate parallel agent teams, collect results, and present a unified review.
 
-Every finding must be classified as **MUST** (blocks merge), **[Optional]** (suggestion, author decides), or **[Question]** (needs author's rationale).
+Every finding must be classified as **[Must]** (blocks merge), **[Optional]** (suggestion, author decides), or **[Question]** (needs author's rationale).
 
 ## Skill Structure
 
@@ -319,7 +319,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/consolidation-rules.md
 5. **Cross-agent dedup with disagreement handling (G7 + G4-pre + G4)** — see Section A of `consolidation-rules.md`. Two findings dedup when location matches AND descriptions share Jaccard similarity ≥ 0.5 on token bigrams AND pattern matches. Then split disagreements by kind: a **factual** dispute (agents assert incompatible things about the repo) is settled by measuring it yourself per **G4-pre** and classifying once from the fact, with the measurement carried into the posted body — weakest-wins must not arbitrate a question that has a right answer. Only a genuine **severity** dispute falls through to G4: pick the weakest (QUESTION beats OPTIONAL beats MUST) and annotate the finding with the disagreement (shown only in the local preview). **Independent agreement raises `certainty`** — see Section A's convergence rule; three agents arriving at the same observation separately is evidence, not noise.
 6. **Pattern consolidation (G1)** — see Section B of `consolidation-rules.md`. Group remaining findings by `(pattern, classification)`. For any group with size ≥ 2 whose `suggested_fix` shapes are identical modulo identifier substitution, merge into a single finding anchored at the lowest (file, line). The merged body lists every location.
 7. **Prevalence calibration (G3)** — see Section C of `consolidation-rules.md`. For every finding with `pattern_kind: "convention"`, run a codebase-prevalence probe via `grep` against a structurally-similar file glob. Reclassify: ≥0.8 keep MUST, 0.5–0.8 downgrade to Optional, <0.5 drop. Skip the probe for `pattern_kind ∈ {bug, project-rule, memory}`.
-7b. **Memory-premise verification (G9)** — see Section C-bis of `consolidation-rules.md`. For every finding with `pattern_kind: "memory"` whose rule body asserts a **falsifiable claim about the codebase**, verify that claim before allowing MUST. If the premise is false, downgrade to `[Optional]`, state both the rule and the contradicting measurement in the body, and raise a memory-correction candidate in Step 9. Memory rules that assert only a preference (no factual premise) are unaffected and keep their prevalence bypass.
+7b. **Memory-premise verification (G9)** — see Section C-bis of `consolidation-rules.md`. For every finding with `pattern_kind: "memory"` whose rule body asserts a **falsifiable claim about the codebase**, verify that claim before allowing `[Must]`. If the premise is false, downgrade to `[Optional]`, state both the rule and the contradicting measurement in the body, and raise a memory-correction candidate in Step 9. Memory rules that assert only a preference (no factual premise) are unaffected and keep their prevalence bypass.
 8. **Match existing PR review comments** (PR mode only). Fetch existing inline comments via `gh api repos/{owner}/{repo}/pulls/{pr}/comments`. For each remaining finding, check whether an existing comment already points at the same `file:line` and makes the same essential point. When it matches, **remove the finding from the Required / Suggestions / Questions buckets** and place it instead in a new **Existing Threads** bucket, recording:
    - The original comment ID (you'll need it to react/reply)
    - Stance: `react` if your point is identical to the existing comment, `reply` if you have something to add.
@@ -330,7 +330,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/consolidation-rules.md
    - **Only resolved priors match** → keep as a fresh inline finding (the rule was addressed for the old locations; this is new ground).
    - **General Finding already in a prior body** → drop the candidate entirely.
 
-   Classification escalation (e.g., prior was `[Optional]`, candidate is `MUST`) flips Case 1 (react) into Case 2 (reply with an escalation note).
+   Classification escalation (e.g., prior was `[Optional]`, candidate is `[Must]`) flips Case 1 (react) into Case 2 (reply with an escalation note).
 10. Collect positive observations from Agent 8.
 11. **Collect Obstacles Encountered** from every agent's output. Deduplicate identical entries and keep them verbatim. Drop entries that say "None".
 12. Group by classification (MUST → OPTIONAL → QUESTION) and within each, sort by `certainty` descending.
@@ -398,11 +398,11 @@ Now render the local preview:
 {self-review banner from pre-pass 7B, if any}
 
 ### Summary Table (S7)
-| Severity | Count | Pattern                                                |
-|----------|-------|--------------------------------------------------------|
-| 🔴 MUST  | {n}   | {pattern1 (locations), pattern2 (locations), ...}      |
-| 🟡 Opt.  | {n}   | {pattern1, pattern2, ...}                              |
-| 🔵 Q     | {n}   | {pattern1, pattern2, ...}                              |
+| Severity    | Count | Pattern                                             |
+|-------------|-------|-----------------------------------------------------|
+| 🔴 [Must]     | {n}   | {pattern1 (locations), pattern2 (locations), ...}   |
+| 🟡 [Optional] | {n}   | {pattern1, pattern2, ...}                           |
+| 🔵 [Question] | {n}   | {pattern1, pattern2, ...}                           |
 
 *(Omit rows with count 0. Omit the whole table when zero findings posted.)*
 
@@ -515,11 +515,11 @@ The first line of the body is a **marker** encoding the HEAD SHA and the reviewe
 _This code review was made automatically by Krzysztof Trzos Code Review AI Skill at <SHORT_SHA> (memory <UNIX_MTIME>)._
 
 ## Summary
-| Severity | Count | Pattern                                                |
-|----------|-------|--------------------------------------------------------|
-| 🔴 MUST  | {n}   | {pattern1 (locations), pattern2 (locations), ...}      |
-| 🟡 Opt.  | {n}   | {pattern1, pattern2, ...}                              |
-| 🔵 Q     | {n}   | {pattern1, pattern2, ...}                              |
+| Severity    | Count | Pattern                                             |
+|-------------|-------|-----------------------------------------------------|
+| 🔴 [Must]     | {n}   | {pattern1 (locations), pattern2 (locations), ...}   |
+| 🟡 [Optional] | {n}   | {pattern1, pattern2, ...}                           |
+| 🔵 [Question] | {n}   | {pattern1, pattern2, ...}                           |
 
 *(Omit rows with count 0. Omit the entire Summary section when zero findings posted.)*
 
@@ -532,7 +532,7 @@ _This code review was made automatically by Krzysztof Trzos Code Review AI Skill
 *(Omit the Positive Observations heading if there are none.)*
 
 ## General Findings
-{Only PR-level or out-of-diff findings. Group by MUST → [Optional] → [Question].
+{Only PR-level or out-of-diff findings. Group by [Must] → [Optional] → [Question].
  Omit the General Findings heading if there are none.}
 
 ### Required Changes
@@ -580,7 +580,7 @@ If the General Findings section has more than ~10 entries, wrap the Suggestions 
 Each inline finding posts to its file:line with a body like:
 
 ````markdown
-**🔴 MUST** — {subject}
+**🔴 [Must]** — {subject}
 
 {problem — 1–3 sentences: what is wrong, and what happens because of it}
 
@@ -602,9 +602,11 @@ _Certainty: {N}% · Pattern: {name} · Agents: {which agreed}_
 ````
 
 Use the badge that matches the classification:
-- `**🔴 MUST**` for required changes
+- `**🔴 [Must]**` for required changes
 - `**🟡 [Optional]**` for suggestions
 - `**🔵 [Question]**` for questions
+
+All three are bracketed and carry a single leading capital. Keep them byte-identical across every comment.
 
 Which of the four parts a given finding carries, when to drop one, and what belongs inside the fold are settled in `comment-style.md` § 2. Do not restate those rules here. A single copy is what stops the two from drifting apart.
 
@@ -630,7 +632,7 @@ Why pre-validate: a single bad line on the batched review POST kills the whole s
 
 Pick the `event` value based on what's being posted, after the inline/general bucketing in the previous steps:
 
-- **`REQUEST_CHANGES`** — the review contains at least one **MUST** or **[Question]**, anywhere (inline comments or General Findings). Either category signals the PR isn't ready: a MUST blocks merge, and a Question means the reviewer needs an answer before they can sign off.
+- **`REQUEST_CHANGES`** — the review contains at least one **[Must]** or **[Question]**, anywhere (inline comments or General Findings). Either category signals the PR isn't ready: a `[Must]` blocks merge, and a `[Question]` means the reviewer needs an answer before they can sign off.
 - **`APPROVE`** — there are zero MUSTs and zero Questions across both buckets. Optionals alone are not blocking, so an otherwise-clean review with only suggestions is an approval.
 - **`COMMENT`** — only used as a manual escape hatch when the user picks `edit` and explicitly asks to leave the review unsigned. Don't pick this automatically.
 
@@ -812,13 +814,13 @@ This mode skips Phases 1 and 2 entirely. It addresses author responses on the sk
 ## Important Rules
 
 - **Auto-post a clean approval; draft everything else.** A computed `APPROVE` is posted without asking. Any other event is created as a `PENDING` draft for the reviewer to check and submit — never submitted on their behalf, unless they explicitly asked for immediate publication.
-- **Classify every finding.** MUST / [Optional] / [Question]. Never leave a finding unclassified.
+- **Classify every finding.** [Must] / [Optional] / [Question]. Never leave a finding unclassified.
 - **Explain WHY for MUST findings.** Every required change needs a reason and a concrete code alternative.
 - **Acknowledge good work.** Positive observations matter.
 - **Be specific.** Every finding must reference a file and line.
 - **Be honest about certainty.** Don't inflate scores. If unsure, score lower. Never raise `certainty` to squeeze a finding past the gate — if it doesn't clear 80, it doesn't post.
 - **Respect the 80% threshold.** Don't include findings you aren't sure are factually present. But score `certainty` on *presence*, not on *importance* — a definitely-present nitpick is high-certainty and low-materiality, which makes it an `[Optional]`, not a dropped finding.
-- **A reviewer-memory rule is evidence, not proof.** When a memory rule's stated justification is checkable, check it. If the codebase contradicts it, say so plainly in the finding, drop to `[Optional]`, and offer to correct the memory in Step 9 — do not post a MUST built on a false premise, and do not silently discard the rule either.
+- **A reviewer-memory rule is evidence, not proof.** When a memory rule's stated justification is checkable, check it. If the codebase contradicts it, say so plainly in the finding, drop to `[Optional]`, and offer to correct the memory in Step 9 — do not post a `[Must]` built on a false premise, and do not silently discard the rule either.
 - **Deduplicate across agents.** Same issue from multiple agents → keep the most detailed, note agreement.
 - **Agents disagreeing about a fact is a measurement task, not a voting task.** When two agents assert incompatible things about the repo — a convention is already established, a sibling PR already landed, a symbol exists — go and measure it (`git merge-base --is-ancestor`, `git grep` at an explicit ref, `gh pr view --json baseRefName`), then classify once from the result and put the measurement in the finding. Never let the weakest-wins tiebreak stand in for an answer you could have looked up.
 - **PR discipline comes first.** Scope/size violations are the most important feedback.

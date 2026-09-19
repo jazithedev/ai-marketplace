@@ -61,7 +61,7 @@ To make that possible, sub-step 1's gate is a **two-stage** filter:
 1. Drop findings with `certainty < 40` outright — too speculative to be worth carrying.
 2. Hold findings with `40 ≤ certainty < 80` in a **pending set** rather than discarding them. Run dedup (Section A) over `survivors ∪ pending`. Any pending finding whose post-convergence `certainty` reaches 80 rejoins the working set; the rest are dropped after dedup completes.
 
-A finding rescued this way is usually a `[Question]`, not a MUST — high certainty that something is *true* combined with genuine uncertainty about whether it *matters* is exactly what a Question is for.
+A finding rescued this way is usually a `[Question]`, not a `[Must]` — high certainty that something is *true* combined with genuine uncertainty about whether it *matters* is exactly what a Question is for.
 
 **Do not** apply convergence when contributors are not independent: findings from the same agent (already handled by same-agent dedup), or where one agent's prompt explicitly seeded the observation for another to check. Orchestrator-directed probes are confirmations of your own hypothesis, not independent discoveries — record them at the single agent's certainty.
 
@@ -180,7 +180,7 @@ Prefer to have the agent run this at Phase 2 time and report it (see SKILL.md St
 |---------------|--------|
 | **Holds** | Keep the agent's classification. Memory rule confirmed; no note needed. |
 | **Fails** | Downgrade to `[Optional]`. Body must state the rule, the contradicting measurement, and that it is being raised for consistency only. Add a memory-correction candidate for Step 9. |
-| **Cannot be checked cheaply** | Keep the classification but cap at `[Optional]` if it would otherwise be MUST, and say in the body that the premise is unverified. Never block a merge on an unverified premise. |
+| **Cannot be checked cheaply** | Keep the classification but cap at `[Optional]` if it would otherwise be `[Must]`, and say in the body that the premise is unverified. Never block a merge on an unverified premise. |
 | **No premise present** (taste rule) | Skip this section entirely. Classification unchanged. |
 
 ### What a downgraded finding must say
@@ -234,7 +234,7 @@ _This code review was made automatically by Krzysztof Trzos Code Review AI Skill
 - `prior_skill_findings.inline` — one entry per inline comment with `{comment_id, path, line, signature, classification, resolved}`
 - `prior_skill_findings.general` — one entry per General Finding parsed from the body with `{review_id, signature, classification}`
 
-Both collections use the same signature normalisation: lowercase, badge emoji stripped (`🔴 / 🟡 / 🔵`), leading classification token (`must / optional / question`) and surrounding punctuation stripped. The result is a topic key like `add // arrange / // act / // assert section comments to every test method`.
+Both collections use the same signature normalisation: lowercase, badge emoji stripped (`🔴 / 🟡 / 🔵`), leading classification token (`must / optional / question`) and surrounding punctuation stripped, **square brackets included**. Bracketing the token is a presentation change this skill made partway through its life, so `**🔴 MUST** — x` and `**🔴 [Must]** — x` must normalise to the same key; if they don't, the next review stops recognising its own prior comments and re-posts all of them. The result is a topic key like `add // arrange / // act / // assert section comments to every test method`.
 
 ### Indexes
 
@@ -283,12 +283,12 @@ For Case 2 (cross-file reply rollup), if `unresolved` has multiple entries on di
 
 ### Classification escalation
 
-When `candidate.classification` is **stricter** than the matched prior (e.g., the prior was `[Optional]`, the candidate is `MUST`):
+When `candidate.classification` is **stricter** than the matched prior (e.g., the prior was `[Optional]`, the candidate is `[Must]`):
 
 - For Case 1 — promote to `stance = "reply"` with a body explaining the escalation, instead of a silent react.
 - For Case 2 — same; the reply body should call out the escalation.
 - For Cases 3 and 5 — already fresh, no change.
-- For Case 4 — escalating a General Finding from `[Optional]` to `MUST` is rare; treat as Case 5 (keep fresh) and let the new posting carry the upgraded severity.
+- For Case 4 — escalating a General Finding from `[Optional]` to `[Must]` is rare; treat as Case 5 (keep fresh) and let the new posting carry the upgraded severity.
 
 ### Cross-file reply body template
 
@@ -326,7 +326,7 @@ Agents therefore emit two independent scores.
 | Field | Question it answers | Range | What it drives |
 |-------|--------------------|-------|----------------|
 | `certainty` | Is this observation factually true of the code as written? | 0–100 | The sub-step 1 gate, the convergence rule, display, sort order |
-| `materiality` | If true, how much does it matter? | `high` / `medium` / `low` | Classification: MUST / `[Optional]` / `[Question]` |
+| `materiality` | If true, how much does it matter? | `high` / `medium` / `low` | Classification: `[Must]` / `[Optional]` / `[Question]` |
 
 ### Scoring certainty
 

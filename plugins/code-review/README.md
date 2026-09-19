@@ -1,6 +1,6 @@
 # Code Review
 
-Multi-agent code review skill for Claude Code. Simulates JaziTheDev's (Krzysztof Trzos) review style, derived from over a thousand real PR reviews. The orchestrator coordinates parallel review agents, deduplicates findings, classifies them as **MUST** / **[Optional]** / **[Question]**, and posts the result as inline GitHub review comments.
+Multi-agent code review skill for Claude Code. Simulates JaziTheDev's (Krzysztof Trzos) review style, derived from over a thousand real PR reviews. The orchestrator coordinates parallel review agents, deduplicates findings, classifies them as **[Must]** / **[Optional]** / **[Question]**, and posts the result as inline GitHub review comments.
 
 ## What it checks
 
@@ -50,20 +50,20 @@ The skill also activates automatically when you say "review this PR", "code revi
 
 For every finding the skill produces:
 
-- **Classification** — `MUST` (blocks merge), `[Optional]` (suggestion), `[Question]` (asks the author for rationale)
-- **Certainty** — is the observation factually true of the code? Findings below 80 are filtered out. Scored separately from importance, so a definitely-present nitpick becomes an `[Optional]` instead of being dropped, and a serious-but-speculative hunch doesn't post as a `MUST`
+- **Classification** — `[Must]` (blocks merge), `[Optional]` (suggestion), `[Question]` (asks the author for rationale). Every badge is bracketed and carries a single leading capital.
+- **Certainty** — is the observation factually true of the code? Findings below 80 are filtered out. Scored separately from importance, so a definitely-present nitpick becomes an `[Optional]` instead of being dropped, and a serious-but-speculative hunch doesn't post as a `[Must]`
 - **Materiality** — how much it matters, which is what drives the classification
 - **File and line** — every inline-postable finding points at a real `file:line` **that this PR adds or modifies**; pre-existing violations are context, never an ask
-- **Suggested fix** — present whenever there is something concrete to propose, which is nearly always for a `MUST`
+- **Suggested fix** — present whenever there is something concrete to propose, which is nearly always for a `[Must]`
 - **Why** — the full argument, folded into a collapsed `<details>` block so it costs nothing to skip. Included when it carries evidence the problem and the fix have not already given, and dropped when it would only repeat them
 
 Findings are read against the PR head, fetched into a local ref, so reviews work on **stacked PRs** whose files don't exist on the branch you have checked out.
 
-Reviewer preferences saved in Claude Code's auto-memory are applied as additional rules — but when such a rule justifies itself with a checkable claim about the codebase ("these paths are excluded from coverage", "the team removes these"), the skill verifies that claim first. If the codebase contradicts it, the finding drops to `[Optional]` with the measurement shown, and you're offered a correction to the rule instead of the same false `MUST` on every future review.
+Reviewer preferences saved in Claude Code's auto-memory are applied as additional rules — but when such a rule justifies itself with a checkable claim about the codebase ("these paths are excluded from coverage", "the team removes these"), the skill verifies that claim first. If the codebase contradicts it, the finding drops to `[Optional]` with the measurement shown, and you're offered a correction to the rule instead of the same false `[Must]` on every future review.
 
 A memory rule's **carve-out is permission, never a demand**. Most such rules are subtractive ("remove narrative PHPDoc, but keep array-shape annotations"), and the exception clause exempts code from the rule rather than creating a rule of its own — so the skill flags prose a PR *adds*, never prose a PR *deletes*. Relatedly, the skill never asks for documentation to be added or restored: absent documentation is not a finding, and a constraint worth stating is reported as something to express in code (a value object, a guard clause, a named argument, a named test) rather than in a paragraph.
 
-In PR mode the review event is computed automatically: `REQUEST_CHANGES` if any `MUST` or `[Question]` is present, otherwise `APPROVE`. That verdict also decides how the review lands on GitHub:
+In PR mode the review event is computed automatically: `REQUEST_CHANGES` if any `[Must]` or `[Question]` is present, otherwise `APPROVE`. That verdict also decides how the review lands on GitHub:
 
 - **`APPROVE`** — posted for you straight away. A clean review has nothing for you to weigh, so there is nothing to confirm.
 - **anything else** — created as a **pending draft**. The inline comments are attached but published to nobody; you read them on the PR's *Files changed* tab, edit or drop individual ones, and submit with the event you settle on.

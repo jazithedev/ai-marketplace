@@ -47,7 +47,7 @@ For each skill-authored review, build two collections: `prior_findings.inline` (
 ### Inline comments
 
 1. Fetch comments where `pull_request_review_id` equals the review's id.
-2. For each inline comment, extract the **finding signature**: the first non-empty line of the body, normalised — lowercase, badge emoji stripped (`🔴 / 🟡 / 🔵`), leading classification token (`must / optional / question`) and surrounding punctuation stripped. The result is a topic key like `add // arrange / // act / // assert section comments to every test method`.
+2. For each inline comment, extract the **finding signature**: the first non-empty line of the body, normalised — lowercase, badge emoji stripped (`🔴 / 🟡 / 🔵`), leading classification token (`must / optional / question`) and surrounding punctuation stripped, **square brackets included**. Bracketing the token is a presentation change this skill made partway through its life, so `**🔴 MUST** — x` and `**🔴 [Must]** — x` must normalise to the same key; if they don't, the next review stops recognising its own prior comments and re-posts all of them. The result is a topic key like `add // arrange / // act / // assert section comments to every test method`.
 3. Look up each comment's **resolved state**. The REST endpoint doesn't expose `isResolved` on inline comments — use GraphQL:
 
    ```bash

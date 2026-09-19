@@ -29,7 +29,7 @@ For genuine bug/security findings (not pattern conformance), score `certainty` o
 ## Classification
 
 For each finding, classify it:
-- **MUST**: Required change before merge (no prefix in output)
+- **MUST**: Required change before merge (prefix with `[Must]`)
 - **OPTIONAL**: Non-blocking suggestion (prefix with `[Optional]`)
 - **QUESTION**: Asking for rationale (prefix with `[Question]`)
 
