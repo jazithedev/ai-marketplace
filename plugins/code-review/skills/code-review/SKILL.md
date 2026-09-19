@@ -67,10 +67,10 @@ gh pr view <PR> --json number,title,body,additions,deletions,changedFiles,files,
 gh pr diff <PR>
 
 # Changed-files list
-gh pr diff <PR> --name-only
+gh pr view <PR> --json files --jq '.files[].path' 
 ```
 
-`gh pr diff` doesn't accept `--stat` — that flag only exists on `git diff`. The line-count totals you might have wanted from `--stat` already come from the `additions` / `deletions` / `changedFiles` fields on `gh pr view --json` above; what the agents actually need from this call is the file list, which is what `--name-only` returns.
+`gh pr diff` accepts neither `--stat` nor `--name-only` — both belong to `git diff`. The line-count totals come from the `additions` / `deletions` / `changedFiles` fields on `gh pr view --json` above, and the file list comes from that same call's `files` array. Verify any `gh` flag before writing it into this file: an invalid one fails loudly here, but the same mistake inside a `--jq` filter fails silently (see Step 8).
 
 In **local mode**: use `git diff HEAD` and `git diff HEAD --name-only` instead. Infer purpose from branch name and commit messages.
 
@@ -248,7 +248,11 @@ When an agent — or you, in a later step — needs the actual content of a file
 gh api "repos/{owner}/{repo}/contents/{path}?ref={sha}" --jq '.content' | base64 -d
 ```
 
-The PR's head SHA is in `gh pr view <PR> --json headRefOid` (already fetched in Step 1).
+The PR's head SHA comes from the API, not from `gh pr view` — there is no `headRefOid` JSON field:
+
+```bash
+gh api repos/{owner}/{repo}/pulls/{pr} --jq '.head.sha'
+```
 
 ### Step 5: Launch all review agents in parallel
 
@@ -618,8 +622,10 @@ GitHub's review API rejects the **entire review** if any inline comment points a
 
 1. Fetch hunk data:
    ```bash
-   gh api repos/{owner}/{repo}/pulls/{pr}/files --paginate --jq '.[] | {path, patch}'
+   gh api repos/{owner}/{repo}/pulls/{pr}/files --paginate --jq '.[] | {path: .filename, patch}'
    ```
+
+   **The field is `filename`, not `path`.** A bare `{path, patch}` yields `path: null` for every file, every finding then fails the "file not in the PR's files list" test below, and **every inline comment is silently demoted to General Findings** — a working review with the whole point of this step removed, and no error to notice.
 2. For each `patch`, parse `@@ -a,b +c,d @@` headers to derive the set of valid RIGHT-side line numbers — every line in the hunk that begins with `+` or ` ` (a space, i.e. a context line), counted from `c` onward.
 3. For each finding with `file:line`:
    - File not in the PR's files list → demote to **General Findings**.
