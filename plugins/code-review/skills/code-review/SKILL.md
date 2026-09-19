@@ -370,7 +370,9 @@ You are reformatting code-review findings. Each arrives as one block of argument
 For each input finding return:
 - "problem": 1-3 sentences, under 60 words. What is wrong, and what happens because of it. It must stand alone: a reader who sees only the subject and this still knows what is broken. No call chains, no measurements, no prior-review history, no rejected alternatives - those are evidence.
 - "why": everything else from the body, rewritten. Use null if nothing is left that the subject, problem or suggested_fix has not already said.
-- "suggested_fix": the input fix, kept as code wherever code says it. Compress a fenced block over 10 lines with `// ...`. Return it unchanged when there is nothing to compress.
+- "suggested_fix": the input fix, kept as code wherever code says it. Compress a fenced block over 10 lines with `// ...`. Return it unchanged when there is nothing to compress. When a snippet itself contains a fenced block, open the outer fence with four backticks - a three-backtick outer fence is closed early and swallows everything after it.
+
+If the body ends with a `Locations to fix:` bullet list, drop it entirely. It is rendered separately, outside the fold, and must not appear in "why".
 
 Preserve every concrete claim. Every file path, identifier, number, measurement and quoted string in the input body must still appear in "problem" or "why". Do not shorten by deleting evidence - only padding, softeners ("I think", "It seems", "perhaps") and sentences that restate the previous sentence may go. Keep fenced code blocks inside the body whole.
 
@@ -384,7 +386,7 @@ Return: JSON array with the same `id` values and the `problem`, `why` and `sugge
 
 **Validation.** For each returned finding, check that every backtick-quoted token and every number present in the input `body` also appears across `subject` + `problem` + `why` + `suggested_fix` combined. Check all four, not only the two this pass rewrites: the prompt lets the model drop from `why` whatever the subject or the fix already said, so a check scoped to `problem` + `why` would fail a correct split. A miss means the pass dropped evidence, so treat that finding as failed.
 
-**Fallback, in order.** If the batched response is not valid JSON, or the `id` set doesn't match, or a finding fails validation: retry those findings with per-finding Haiku calls. If that fails too, use the original body as `problem` with `why` set to `null` and move on. Never block the preview on this pass — a comment in the old shape still gets read; a review that never posts does not.
+**Fallback, in order.** If the batched response is not valid JSON, or the `id` set doesn't match, or a finding fails validation: retry those findings with per-finding Haiku calls. If that fails too, put the original body in `why` and set `problem` to `See the detail below.`, so the fold still holds on the degraded path — never put an unshaped body in `problem`, which always renders unfolded and would reproduce the wall of text this pass exists to remove. When it is the whole batched response that is unparseable there are no `id` values to retry individually, so retry the batch once before falling through. Never block the preview on this pass — a comment in the old shape still gets read; a review that never posts does not.
 
 Keep each finding's original body as `body_raw` so the reviewer can request the unshaped version during `edit`.
 
@@ -421,9 +423,10 @@ _Within **Required Changes**, **Suggestions**, and **Questions**, separate conse
 ### Required Changes ({count})
 Items that must be addressed before merge.
 
-- [{certainty}%] **{file}:{line}** — {subject}
+- [{certainty}%] [Must] **{file}:{line}** — {subject}
   {problem — 1–3 sentences}
   **Suggested fix:** {concrete code alternative}
+  **Locations:** {from `consolidated_locations`, only when G1 merged this finding}
   *(Why: {first sentence of `why`, or "—" when `why` is null})*
   *(Pattern: {name}, Agents: {which agents agreed}{disagreement annotation if any})*
 
@@ -540,9 +543,10 @@ _This code review was made automatically by Krzysztof Trzos Code Review AI Skill
  Omit the General Findings heading if there are none.}
 
 ### Required Changes
-- [{certainty}%] **{subject}**
+- [{certainty}%] [Must] **{subject}**
   {problem — 1–3 sentences}
   **Suggested fix:** {concrete alternative}
+  **Locations:** {from `consolidated_locations`, only when G1 merged this finding}
 
   <details>
   <summary>Why</summary>
@@ -592,6 +596,9 @@ Each inline finding posts to its file:line with a body like:
 ```{lang}
 {concrete alternative}
 ```
+
+**Locations:** *(only when G1 merged this finding — render from `consolidated_locations`, never from inside the fold)*
+- `{file}:{line}` — `{identifier}`
 
 <details>
 <summary>Why</summary>
