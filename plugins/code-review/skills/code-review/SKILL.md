@@ -32,6 +32,7 @@ code-review/
     ├── ddd-review-checklist.md           # DDD tactical & strategic checklist
     ├── ddd-expert-knowledge-base.md      # Canonical DDD reference (~54KB)
     ├── consolidation-rules.md            # Finding aggregation rules (G1, G3, G4, G7, G8)
+    ├── comment-style.md                  # How a comment body is written (S7, S8)
     └── reviewer-memory-loading.md        # Auto-memory load + write-back (G5, S3)
 ```
 
@@ -340,32 +341,48 @@ Each finding leaving Step 6 has the shape described at the bottom of `references
 
 Before rendering the local preview, run two pre-passes:
 
-**Pre-pass 7A — Tone adjustment (S5, batched).** Rewrite each finding `body` to:
-- Drop redundant "Why:" lines when the description already explains the why.
-- Compress code blocks to ≤ 10 lines (replace longer segments with `// …`).
-- Strip greetings, padding, and softeners ("I think", "It seems", "perhaps").
-- Target ~30% reduction in body length.
+**Pre-pass 7A — Shape each body into a readable comment (S5, batched).**
 
-**Win 4 — single batched call.** Invoke one Haiku sub-agent for the entire findings array (not one call per finding). The sub-agent receives a JSON array of `{id, body}` objects and must return a JSON array of `{id, body}` objects with rewritten bodies. The `id` field maps back to the candidate finding.
+Read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/comment-style.md` before running this pass. Agents hand you a finding as one block of argument, which is the right shape for an agent and the wrong shape for a reader. This pass turns each one into the four parts the reader actually uses, and rewrites the prose so a developer whose first language is not English understands it on one pass.
 
-Prompt template:
+For each finding:
+- If G1 appended a `Locations to fix:` list to `body`, **remove it before splitting**. It is an instruction, not an argument, and it renders outside the fold from the finding's `consolidated_locations` array. Left in `body` it would be folded away, which `comment-style.md` § 2 forbids.
+- Split the remaining `body` into **`problem`** — 1–3 sentences, under 60 words, saying what is wrong and what happens because of it — and **`why`**, holding everything else.
+- Rewrite both under the plain-English rules in `comment-style.md` § 3.
+- Return `suggested_fix` as well. Keep it as code wherever code says it, and compress a block over 10 lines with `// …`. It renders outside the fold, so its length is what the reader pays.
+- Set `why` to `null` when it would only restate the subject, the problem or the fix. An empty fold is worse than no fold.
+
+**This pass restructures; it does not compress.** Every file path, identifier, number, measurement and quoted string in the input body must still appear in the output, most of it inside `why`. Do not compress bodies by a percentage. That deletes exactly the evidence an author needs when they push back on a finding. The reading burden is solved by folding the argument away, not by throwing it out, so a fenced code block inside `body` is kept whole: the fold makes its length free. What may legitimately go is padding — greetings, softeners ("I think", "It seems", "perhaps"), and sentences that restate the sentence above them.
+
+**Win 4 — single batched call.** Invoke one Haiku sub-agent for the entire findings array (not one call per finding). It receives a JSON array of `{id, subject, body, suggested_fix}` objects, where `subject` is the finding's `description` field, and returns a JSON array of `{id, problem, why, suggested_fix}` objects. The `id` field maps back to the candidate finding.
+
+Prompt template (substitute the resolved plugin path, as the Step 5 agent prompts do):
 
 ```
-Rewrite each `body` to be ~30% shorter while preserving every concrete claim, file:line reference, and suggested-fix code block. Apply these rules:
-- Drop "Why:" lines when the description already explains the why.
-- Compress code blocks to ≤ 10 lines (replace longer segments with `// …`).
-- Strip greetings, padding, "I think", "It seems", "perhaps".
-- Keep markdown formatting, badges, and certainty/pattern footers verbatim.
+Read ${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/comment-style.md, sections 2 and 3, before you start. Section 3 holds ten plain-English rules; they are the standard your output must meet. They live in that file alone so they cannot drift from the guide the reviewer reads.
+
+You are reformatting code-review findings. Each arrives as one block of argument. Split it so the reader gets the verdict immediately and the evidence only if they want it.
+
+For each input finding return:
+- "problem": 1-3 sentences, under 60 words. What is wrong, and what happens because of it. It must stand alone: a reader who sees only the subject and this still knows what is broken. No call chains, no measurements, no prior-review history, no rejected alternatives - those are evidence.
+- "why": everything else from the body, rewritten. Use null if nothing is left that the subject, problem or suggested_fix has not already said.
+- "suggested_fix": the input fix, kept as code wherever code says it. Compress a fenced block over 10 lines with `// ...`. Return it unchanged when there is nothing to compress.
+
+Preserve every concrete claim. Every file path, identifier, number, measurement and quoted string in the input body must still appear in "problem" or "why". Do not shorten by deleting evidence - only padding, softeners ("I think", "It seems", "perhaps") and sentences that restate the previous sentence may go. Keep fenced code blocks inside the body whole.
+
+Apply every rule in section 3 to "problem" and "why". Keep markdown formatting inside the text (code spans, fenced blocks, block quotes, lists).
 
 Input (JSON):
 {findings_array}
 
-Return: JSON array with the same `id` values and the rewritten `body` field. Output must be valid JSON, nothing else.
+Return: JSON array with the same `id` values and the `problem`, `why` and `suggested_fix` fields. Output must be valid JSON, nothing else.
 ```
 
-**Fallback.** If the batched response is not valid JSON or the `id` set doesn't match the input, fall back to per-finding Haiku calls. Don't block the preview on this — a malformed tone pass should never prevent posting.
+**Validation.** For each returned finding, check that every backtick-quoted token and every number present in the input `body` also appears across `subject` + `problem` + `why` + `suggested_fix` combined. Check all four, not only the two this pass rewrites: the prompt lets the model drop from `why` whatever the subject or the fix already said, so a check scoped to `problem` + `why` would fail a correct split. A miss means the pass dropped evidence, so treat that finding as failed.
 
-Keep each finding's original body as `body_raw` so the reviewer can request the un-toned version during `edit`.
+**Fallback, in order.** If the batched response is not valid JSON, or the `id` set doesn't match, or a finding fails validation: retry those findings with per-finding Haiku calls. If that fails too, use the original body as `problem` with `why` set to `null` and move on. Never block the preview on this pass — a comment in the old shape still gets read; a review that never posts does not.
+
+Keep each finding's original body as `body_raw` so the reviewer can request the unshaped version during `edit`.
 
 **Pre-pass 7B — Self-review check (S2).** If `gh api user --jq '.login'` equals the PR author's login AND the computed verdict is `APPROVE`, prepend this banner to the local preview:
 
@@ -400,15 +417,18 @@ _Within **Required Changes**, **Suggestions**, and **Questions**, separate conse
 ### Required Changes ({count})
 Items that must be addressed before merge.
 
-- [{certainty}%] **{file}:{line}** — {description}
-  **Why:** {explanation}
+- [{certainty}%] **{file}:{line}** — {subject}
+  {problem — 1–3 sentences}
   **Suggested fix:** {concrete code alternative}
+  *(Why: {first sentence of `why`, or "—" when `why` is null})*
   *(Pattern: {name}, Agents: {which agents agreed}{disagreement annotation if any})*
 
 ### Suggestions ({count})
 Non-blocking improvements — author's discretion.
 
-- [{certainty}%] [Optional] **{file}:{line}** — {description}
+- [{certainty}%] [Optional] **{file}:{line}** — {subject}
+  {problem — 1–3 sentences}
+  **Suggested fix:** {concrete alternative, when there is one}
   *(Pattern: {name})*
 
 ### Questions ({count})
@@ -417,7 +437,8 @@ Clarification needed from the author. **For each Question, the reviewer can choo
   - `[r]` resolve in-place with own answer — won't be posted; offered for memory write-back in Step 9
   - `[d]` drop entirely
 
-- [{certainty}%] [Question] **{file}:{line}** — {description}
+- [{certainty}%] [Question] **{file}:{line}** — {subject}
+  {what is unclear — 1–3 sentences}
   *(Pattern: {name})*
   > [k] keep / [r] resolve / [d] drop
 
@@ -515,16 +536,28 @@ _This code review was made automatically by Krzysztof Trzos Code Review AI Skill
  Omit the General Findings heading if there are none.}
 
 ### Required Changes
-- [{certainty}%] {description}
-  **Why:** {explanation}
+- [{certainty}%] **{subject}**
+  {problem — 1–3 sentences}
   **Suggested fix:** {concrete alternative}
 
+  <details>
+  <summary>Why</summary>
+
+  {the full argument, in plain sentences}
+
+  </details>
+
 ### Suggestions
-- [{certainty}%] [Optional] {description}
+- [{certainty}%] [Optional] **{subject}**
+  {problem — 1–3 sentences}
+  **Suggested fix:** {concrete alternative, when there is one}
 
 ### Questions
-- [{certainty}%] [Question] {description}
+- [{certainty}%] [Question] **{subject}**
+  {what is unclear — 1–3 sentences}
 ```
+
+General Findings are the same findings as the inline ones. They only failed the diff-line check, so they use the same four parts and the same writing rules. The `Why` fold is shown above only under Required Changes because that is where it usually lands, but a Suggestion or a Question carries one on the rare occasion it has evidence to fold. Read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/comment-style.md` before writing them, and drop any section that has nothing to put in it.
 
 **The template above is exhaustive.** The top-level body contains exactly: the auto-generation notice, Summary table, PR Discipline, Positive Observations, and General Findings. Nothing else.
 
@@ -542,29 +575,38 @@ If the General Findings section has more than ~10 entries, wrap the Suggestions 
 
 #### Inline comment body — exact template
 
+**Read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/comment-style.md` before you write a single comment body.** It holds the writing contract — what belongs in each part, when to drop one, and the plain-English rules the prose has to pass. The template below is only the shape.
+
 Each inline finding posts to its file:line with a body like:
 
-```markdown
-**🔴 MUST** — {short title}
+````markdown
+**🔴 MUST** — {subject}
 
-{description}
-
-**Why:** {explanation, only for MUSTs}
+{problem — 1–3 sentences: what is wrong, and what happens because of it}
 
 **Suggested fix:**
 ```{lang}
 {concrete alternative}
 ```
 
+<details>
+<summary>Why</summary>
+
+{the full argument, in plain sentences: the call chain, the measurement, the config
+ value, the earlier review round, the alternative you rejected, the part you could
+ not verify}
+
+</details>
+
 _Certainty: {N}% · Pattern: {name} · Agents: {which agreed}_
-```
+````
 
 Use the badge that matches the classification:
 - `**🔴 MUST**` for required changes
 - `**🟡 [Optional]**` for suggestions
 - `**🔵 [Question]**` for questions
 
-For Optional and Question entries the **Why** and **Suggested fix** lines are not required — keep the body short.
+Which of the four parts a given finding carries, when to drop one, and what belongs inside the fold are settled in `comment-style.md` § 2. Do not restate those rules here. A single copy is what stops the two from drifting apart.
 
 **Do not append the auto-generation notice to inline comment bodies.** The notice belongs on the top-level review body only.
 
