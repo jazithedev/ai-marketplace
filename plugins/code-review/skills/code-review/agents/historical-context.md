@@ -42,6 +42,7 @@ For each finding:
 - Historical context description
 - `certainty` (0-100) — is the observation factually true of the code? Not how much it matters.
 - `materiality` — `high` (MUST) / `medium` (Optional) / `low` (Question). See the output contract.
+- `evidence` — the read-only command that settles the finding's factual core plus its verbatim output, or `interpretive` when the finding is a judgement. See the output contract § 5. A judgement is a first-class finding; never drop or soften one for lacking a command.
 
 Report "Nothing notable" if no significant historical context is found.
 

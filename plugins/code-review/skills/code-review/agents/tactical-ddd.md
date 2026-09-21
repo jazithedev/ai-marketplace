@@ -46,6 +46,7 @@ For each issue:
 - Which DDD pattern is violated (e.g., "Anemic Domain Model", "Invariant Leak", "Aggregate Boundary Violation", "Boolean Flag Parameter")
 - `certainty` (0-100) — is the observation factually true of the code? Not how much it matters.
 - `materiality` — `high` (MUST) / `medium` (Optional) / `low` (Question). See the output contract.
+- `evidence` — the read-only command that settles the finding's factual core plus its verbatim output, or `interpretive` when the finding is a judgement. See the output contract § 5. A judgement is a first-class finding; never drop or soften one for lacking a command.
 
 Additionally, end your output with one final line:
 - **Obstacles Encountered:** Report any obstacles encountered during the review process — setup issues, workarounds discovered, or environment quirks. Report commands that needed a special flag or configuration. Report dependencies or imports that caused problems. If none, write "None".

@@ -121,7 +121,46 @@ direction is the rule; the exception is only its limit.
 The same holds for the enclosing instruction that `type: feedback` entries are MUST-grade: what is
 MUST-grade is the rule's own direction, not the negation of its exception.
 
-## 5. Report obstacles
+## 5. Carry the evidence for a factual claim
+
+**A judgement with no command behind it is a first-class finding.** Say so and move on:
+
+```
+evidence: interpretive
+```
+
+The best findings are often of exactly this kind — *this guide breaks its own rules*, *these worked
+examples teach the wrong habit*, *this restates a rule one line before forbidding restatement*. None
+of them reduce to a grep. A contract that quietly rewards the greppable would narrow the review while
+making it look more rigorous, so this clause comes first and outranks everything below it. Never
+downgrade, soften or drop an observation because you cannot produce a command for it.
+
+For the rest — the claims that could simply be **wrong about the code** — emit the command that
+settles it and its verbatim output:
+
+```
+evidence:
+  command: git grep -c "consolidated_locations" {source_ref} -- plugins/
+  output:  "2"
+  supports: "declared once and read nowhere"
+```
+
+Rules:
+
+- The command must be re-runnable by the orchestrator with no setup, and **read-only**: `git show`,
+  `git grep`, `git log`, `sed`, `wc`, `gh api`. Nothing that writes.
+- Paste the output **verbatim**, trimmed to the lines that matter. Never paraphrase it, never tidy it,
+  never reconstruct it from memory.
+- A finding may carry several `evidence` entries when it rests on several facts.
+
+The orchestrator replays these commands (Step 6). That is the point of the field: a citation you did
+not actually run comes back empty or different, and is caught before it reaches the author. This has
+happened — a finding once cited lines 449-469 of a 265-line file, and only a manual check caught it.
+
+A `premise_check` (section 4) is this same idea applied to a memory rule's stated justification. Where
+both apply, emit both; they answer different questions.
+
+## 6. Report obstacles
 
 End your output with an **Obstacles Encountered** line: setup issues, commands needing special flags,
 environment quirks, anything the next step would otherwise rediscover. Write "None" if there were

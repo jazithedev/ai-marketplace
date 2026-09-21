@@ -38,6 +38,7 @@ For each violation:
 - `pattern_marker`: a grep-able string the orchestrator can use to probe codebase prevalence (only for `pattern_kind: project-rule`; can be omitted for `pattern_kind: memory`)
 - `certainty` (0-100) — is the observation factually true of the code? Not how much it matters.
 - `materiality` — `high` (MUST) / `medium` (Optional) / `low` (Question). See the output contract.
+- `evidence` — the read-only command that settles the finding's factual core plus its verbatim output, or `interpretive` when the finding is a judgement. See the output contract § 5. A judgement is a first-class finding; never drop or soften one for lacking a command.
 - Suggested fix
 
 Additionally, end your output with one final line:
