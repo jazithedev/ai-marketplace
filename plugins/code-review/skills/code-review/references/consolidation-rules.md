@@ -80,6 +80,10 @@ Observed 2026-07-31: two agents reported a strict-validation commit as already m
 
 If a fact genuinely cannot be measured, do not fall through to weakest-wins as a substitute: classify it a `[Question]`, state the open fact and what you tried, and let the author close it.
 
+**Your own measurement is not exempt.** Handing your facts to the agents as authoritative is what stops each re-deriving the same topology and reaching a different answer — it does not make them correct. When your own measurement contradicts a finding an agent supported with a command and its output, the agent is not automatically the one who is wrong: re-derive it a second way, by a different route, before dismissing anything.
+
+Broken checks fail confidently: a probe aimed at the wrong location, a pattern that also matches its delimiters, a filter over the wrong set. Each returns a clean number for a different question. So a result that comes back perfectly clean — every item compliant, nothing to report — is the likeliest of all to be answering something other than what was asked, and is a reason to check the probe rather than close the finding.
+
 ### G4 — Classification disagreement
 
 Applies to **severity disputes only** — anything G4-pre did not already settle on the facts.
