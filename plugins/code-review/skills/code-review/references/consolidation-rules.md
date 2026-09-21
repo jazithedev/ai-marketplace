@@ -379,6 +379,7 @@ After all consolidation passes, each finding in the cleaned list has the followi
   "agent_classifications": {"bug-smell-scan": "MUST", "tactical-ddd": "QUESTION"},  // only when disagreement
   "consolidated_locations": [{"file": "...", "line": N, "identifier": "save()"}, ...],  // only after G1 merge
   "suggested_fix": "<code snippet>",
+  "evidence": [{"command": "<read-only command>", "output": "<verbatim>", "supports": "<the claim>"}] | "interpretive",
   "prior_review_comment_id": <int>,  // only if G8b matched a prior comment
   "stance": "react" | "reply" | "new",
   "reply_body": "<cross-file rollup text>"  // only when stance == "reply"

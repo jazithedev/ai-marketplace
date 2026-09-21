@@ -61,6 +61,7 @@ For each finding:
 - Concrete code alternative (for MUST findings)
 - `certainty` (0-100) — is the observation factually true of the code? Not how much it matters. Default 70 for `convention`, normal range for `bug` (see Certainty calibration above).
 - `materiality` — `high` (MUST) / `medium` (Optional) / `low` (Question). See the output contract.
+- `evidence` — the read-only command that settles the finding's factual core plus its verbatim output, or `interpretive` when the finding is a judgement. See the output contract § 5. A judgement is a first-class finding; never drop or soften one for lacking a command.
 
 For positive observations:
 - File and line reference
