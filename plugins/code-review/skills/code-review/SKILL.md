@@ -94,10 +94,11 @@ git show refs/pr/<PR> --stat                              # commits on the branc
 
 A named ref is deliberate — `FETCH_HEAD` is overwritten by any concurrent fetch, and agents run in parallel.
 
-**Tear it down after Step 9** so the reviewer's repo is left as it was found:
+**Tear it down after Step 9** so the reviewer's repo is left as it was found — the ref and the Step 1c workspace together:
 
 ```bash
 git update-ref -d refs/pr/<PR>
+rm -rf "$work_dir"
 ```
 
 Notes:
@@ -105,6 +106,31 @@ Notes:
 - Use `gh api "repos/{owner}/{repo}/contents/{path}?ref={sha}"` only as a fallback when the fetch fails (no push access to the fork, detached CI checkout). Never `curl raw.githubusercontent.com` — it returns an empty body on private repos instead of failing.
 - In **local mode** there is no ref to fetch; `{source_ref}` is the working tree and agents read files directly.
 - Do not `git checkout` the PR branch. The reviewer may have uncommitted work, and a checkout changes state you don't own.
+
+### Step 1c: Materialise the review workspace (`{work_dir}`)
+
+Agents used to be told to fetch each changed file themselves. Seven agents over nine changed files is up to sixty-three `git show` calls for sixty-three copies of the same nine files, and those calls run serially *inside* each agent, so they land straight on the review's wall-clock. Fetch once here and pass the path.
+
+```bash
+work_dir=$(mktemp -d)
+gh pr diff <PR> > "$work_dir/pr.diff"              # always, not only when the diff is large
+
+mkdir -p "$work_dir/files"
+gh pr view <PR> --json files --jq '.files[].path' | while read -r f; do
+  mkdir -p "$work_dir/files/$(dirname "$f")"
+  git show "{source_ref}:$f" > "$work_dir/files/$f" 2>/dev/null || rm -f "$work_dir/files/$f"
+done
+```
+
+A file the PR **deletes** has no blob at the head ref. The `rm -f` leaves it absent rather than empty, so an agent reading it gets "no such file" instead of quietly concluding the file is now empty.
+
+**In local mode** the changed files are already in the working tree, so `{work_dir}/files` *is* the working tree and only `pr.diff` is written, from `git diff HEAD`.
+
+Pass `{work_dir}` to every agent. `{source_ref}` still goes too: the workspace holds only the **changed** files, and an agent legitimately needs the rest of the tree for prevalence probes and sibling comparisons.
+
+**Tear it down after Step 9**, along with the ref — see the teardown in Step 1b.
+
+---
 
 Phase 1 ends here. **Scope and size are reviewed by agents A and B in the single wave below, not in a separate pass.** They used to run first, behind a "continue anyway?" prompt; that gate cost a round of wall-clock on every review and never once stopped one, because a reviewer who asked for a review wants the findings either way. Discipline is still the most important feedback — Step 7 leads with it, and a FAIL is stated before anything else.
 
@@ -236,10 +262,14 @@ Read your instructions from ${CLAUDE_PLUGIN_ROOT}/skills/code-review/agents/{age
 
 {Any agent-specific context: rules, diff, PR number, etc.}
 
-Reading the PR's files: the working copy may not contain them (see Step 1b). Read full file
-contents at the PR head with `git show {source_ref}:<path>` and search with
-`git grep -n <pattern> {source_ref} -- <pathspec>`. Do read the full versions of the files
-you're reviewing — the diff hunks hide surrounding context.
+Reading the PR's files: every changed file is already on disk, in full, at
+`{work_dir}/files/<path>`. Read them from there rather than fetching your own copy. The diff
+is at `{work_dir}/pr.diff`. Do read the full versions and not only the hunks — the hunks hide
+the surrounding context that separates a real finding from a misreading.
+
+For anything outside the change set — a sibling file, a prevalence probe, the rest of the tree —
+use `git show {source_ref}:<path>` and `git grep -n <pattern> {source_ref} -- <pathspec>`. The
+working copy may not contain the PR's files at all on a stacked PR.
 
 {repo_facts}
 
@@ -249,17 +279,12 @@ commits that never reached the default branch. If your finding depends on a repo
 in that block, measure it (`git merge-base --is-ancestor`, `git grep` at an explicit ref) and
 report the command and its output alongside the finding.
 
-Diff to review:
-{diff}
+Diff to review: {work_dir}/pr.diff
 ```
-
-Write the diff to a temp file and pass the **path** rather than inlining it when it exceeds a
-few hundred lines — agents have Read and can pull it themselves, and inlining the same large diff
-into 7 prompts is pure waste.
 
 **Launch these agents simultaneously:**
 
-Every agent additionally receives `{source_ref}` from Step 1b and `{repo_facts}` from Step 4e.
+Every agent additionally receives `{work_dir}` from Step 1c, `{source_ref}` from Step 1b and `{repo_facts}` from Step 4e.
 
 | Agent | File | Model | Needs | Notes |
 |-------|------|-------|-------|-------|
