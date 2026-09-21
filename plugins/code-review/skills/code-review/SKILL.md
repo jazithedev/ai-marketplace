@@ -55,7 +55,7 @@ The user may provide:
 
 ---
 
-## Phase 1 — PR Discipline Check (2 parallel agents)
+## Phase 1 — Gather the inputs
 
 ### Step 1: Fetch PR metadata
 
@@ -106,41 +106,11 @@ Notes:
 - In **local mode** there is no ref to fetch; `{source_ref}` is the working tree and agents read files directly.
 - Do not `git checkout` the PR branch. The reviewer may have uncommitted work, and a checkout changes state you don't own.
 
-### Step 2: Launch 2 parallel agents (Sonnet model)
-
-Launch both agents in a single message so they run concurrently:
-
-**Agent A** — read instructions from `${CLAUDE_PLUGIN_ROOT}/skills/code-review/agents/scope-analysis.md`, then analyze with: PR Title, Description, Changed Files, Diff.
-
-**Agent B** — read instructions from `${CLAUDE_PLUGIN_ROOT}/skills/code-review/agents/size-analysis.md`, then analyze with: additions, deletions, changedFiles, Changed Files, Diff.
-
-### Step 3: Present discipline findings
-
-```
-## PR Discipline Assessment
-
-### Scope: {PASS/FAIL}
-- Category: {category}
-- {details of any violations}
-
-### Size: {PASS/FAIL}
-- Lines changed: {total} (threshold: {which})
-- {details of any violations}
-
-### Suggested Splits (if violations found)
-- PR 1: {description}
-- PR 2: {description}
-```
-
-If violations exist, ask: **"PR has discipline violations. Continue with detailed review anyway? (yes/no)"**
-
-- "no" → Stop. Suggest the author fix scope/size first.
-- "yes" → Proceed to Phase 2.
-- No violations → Proceed automatically.
+Phase 1 ends here. **Scope and size are reviewed by agents A and B in the single wave below, not in a separate pass.** They used to run first, behind a "continue anyway?" prompt; that gate cost a round of wall-clock on every review and never once stopped one, because a reviewer who asked for a review wants the findings either way. Discipline is still the most important feedback — Step 7 leads with it, and a FAIL is stated before anything else.
 
 ---
 
-## Phase 2 — Parallel Agent Team (up to 8 agents)
+## Phase 2 — One parallel agent wave (up to 10 agents)
 
 ### Step 4: Gather project context
 
@@ -293,6 +263,8 @@ Every agent additionally receives `{source_ref}` from Step 1b and `{repo_facts}`
 
 | Agent | File | Model | Needs | Notes |
 |-------|------|-------|-------|-------|
+| Agent A | `agents/scope-analysis.md` | **Haiku** | PR title, description, file list, diff | Scope verdict. Was a separate Phase 1 pass |
+| Agent B | `agents/size-analysis.md` | **Haiku** | `additions`, `deletions`, `changedFiles`, file list, diff | Size verdict. Was a separate Phase 1 pass |
 | Agent 1 | `agents/project-rules.md` | Sonnet | `{rules}` + `{reviewer_rules}` + diff | |
 | Agent 2 | `agents/bug-smell-scan.md` | Sonnet | diff | |
 | Agent 3 | `agents/historical-context.md` | **Haiku** | file list + `{base_ref}` + `{default_branch}` | Git log/blame summarisation, stacked-PR aware |
@@ -302,7 +274,25 @@ Every agent additionally receives `{source_ref}` from Step 1b and `{repo_facts}`
 | Agent 7 | `agents/strategic-ddd.md` | Sonnet | diff + `{reviewer_rules}` | Reads its own references (on-demand) |
 | Agent 8 | `agents/jazi-craftsmanship.md` | Sonnet | diff + `{reviewer_rules}` | Reads its own references |
 
-Phase 1 agents (scope-analysis, size-analysis) also run on **Haiku** — see their respective files.
+#### Which agents to launch
+
+Launch every agent whose subject matter is actually present in the diff. **Turn one off only when you are certain it has nothing to read** — not when you suspect it will find little.
+
+The bar is "certain", and it is deliberately high, because a skipped agent leaves no visible gap. An agent that runs and finds nothing tells you so; an agent that never ran is indistinguishable from one that found nothing, and you will never learn which it was. Measured behaviour supports this: on a diff with no history to mine, Agent 3 ran and honestly reported nothing notable rather than inventing a finding. Idle agents do not produce noise, so trimming the roster buys cost, not quality.
+
+It costs quality in one specific way, so weigh it: the certainty gate holds findings scored 40-79 and lets independent agreement between agents lift them over the bar. Every agent you drop is one fewer chance for a true-but-unconfirmed finding to be corroborated, and it is silently binned instead.
+
+Certain, so skip:
+
+- **Agents 6 and 7** (tactical and strategic DDD) when the diff contains no application source code — documentation, prompts, Markdown, configuration, lock files. They read for domain models and module boundaries; prose has neither.
+- **Agent 4** (previous comments) when the PR has zero reviews and zero comments, or in local mode. There is nothing to parse.
+- **Agent 3** (historical context) when every changed file is new in this PR. There is no history behind a file that did not exist.
+
+Not certain, so launch: anything else. A small diff, an unfamiliar language, a file type you have not seen the agent handle before - none of those are certainty, they are a guess.
+
+**Record every skip.** List the agents you did not launch, and why, in the Step 7 preview under Review Scope. An undeclared skip is the failure this rule exists to prevent.
+
+Agents A, B, 3 and 4 run on **Haiku** — see their respective files.
 
 The `{reviewer_rules}` block is the output of Step 4b. Always pass it to the agents listed above, even when empty — agents check for content and skip the section if blank.
 
@@ -317,6 +307,13 @@ The `{reviewer_rules}` block is the output of Step 4b. Always pass it to the age
 Read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/consolidation-rules.md` and apply the run order it specifies. The high-level sequence:
 
 1. Collect all findings from all agents.
+1b. **Evidence replay.** Gather every finding's `evidence.command` (see `references/agent-output-contract.md` § 5) into **one** shell batch and run it. Compare each result against the claimed `output`:
+   - **Matches** → the finding's factual core is confirmed. Do not re-derive it later.
+   - **Differs** → strip the claim to unverified and measure it yourself before classifying.
+   - **Empty, where output was claimed** → the citation was never run. Drop the finding and note it in Obstacles.
+   - **`evidence: interpretive`** → nothing to replay. Carry it forward untouched; a judgement is not weaker than a measurement, it just answers a different question.
+
+   Run this before the certainty gate, so a fabricated citation cannot be lifted over the bar by convergence in sub-step 5. One batch, not one call per finding — the saving is that verification stops being a serial reasoning loop over each claim.
 2. **Gate on certainty (two-stage)** — `certainty` is "is this observation factually true of the code", NOT "does it matter" — see Section E of `consolidation-rules.md`. Drop findings below 40; **hold** 40–79 in a pending set rather than discarding them, because independent cross-agent agreement in sub-step 5 can lift them over the bar; pass 80+ straight through. A finding that is definitely present but arguably harmless clears this gate and is settled by classification instead. Findings carrying only a legacy `confidence` field are treated as `certainty = confidence`.
 3. **Default missing classifications** — derive from `materiality`: MUST for high, OPTIONAL for medium, QUESTION for low. No finding leaves Step 6 unclassified.
 4. **Same-agent dedup** — within one agent's output, merge findings whose `(file, line)` AND `pattern` match.
@@ -403,6 +400,16 @@ Now render the local preview:
 
 {self-review banner from pre-pass 7B, if any}
 
+{discipline banner — when Agent A or B returned FAIL, state it here, before anything else:
+ "⚠️ Scope: FAIL — {reason}" / "⚠️ Size: FAIL — {lines} lines, {threshold}", plus the suggested
+ splits. Discipline is the most important feedback, so it leads. It no longer gates the review.}
+
+### Review Scope
+- Agents launched: {list}
+- Agents skipped: {agent — the certainty that justified it}, or "none"
+
+*(Never omit this section. An undeclared skip is indistinguishable from an agent that found nothing.)*
+
 ### Summary Table (S7)
 | Severity    | Count | Pattern                                             |
 |-------------|-------|-----------------------------------------------------|
@@ -415,7 +422,7 @@ Now render the local preview:
 _Within **Required Changes**, **Suggestions**, and **Questions**, separate consecutive items with a blank line so the developer can scan findings one at a time before approving the post._
 
 ### PR Discipline
-{Phase 1 results}
+{Agent A scope verdict and Agent B size verdict, with any suggested splits}
 
 ### Positive Observations
 - {things done well, from Agent 8. Omit section if none}
