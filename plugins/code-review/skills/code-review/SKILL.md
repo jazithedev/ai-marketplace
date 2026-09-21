@@ -74,7 +74,7 @@ gh pr view <PR> --json files --jq '.files[].path'
 
 In **local mode**: use `git diff HEAD` and `git diff HEAD --name-only` instead. Infer purpose from branch name and commit messages.
 
-### Step 1b: Make the PR's files readable (`{source_ref}`) — PR mode only
+### Step 2: Make the PR's files readable (`{source_ref}`) — PR mode only
 
 **Do this before launching any agent, including Phase 1.** Every agent needs to read the *full* versions of changed files, not just the diff hunks — the hunks hide the surrounding context that distinguishes a real finding from a misreading (helper methods, the rest of a class, what a refactor replaced).
 
@@ -94,7 +94,7 @@ git show refs/pr/<PR> --stat                              # commits on the branc
 
 A named ref is deliberate — `FETCH_HEAD` is overwritten by any concurrent fetch, and agents run in parallel.
 
-**Tear it down after Step 9** so the reviewer's repo is left as it was found — the ref and the Step 1c workspace together:
+**Tear it down after Step 9** so the reviewer's repo is left as it was found — the ref and the Step 3 workspace together:
 
 ```bash
 git update-ref -d refs/pr/<PR>
@@ -107,7 +107,7 @@ Notes:
 - In **local mode** there is no ref to fetch; `{source_ref}` is the working tree and agents read files directly.
 - Do not `git checkout` the PR branch. The reviewer may have uncommitted work, and a checkout changes state you don't own.
 
-### Step 1c: Materialise the review workspace (`{work_dir}`)
+### Step 3: Materialise the review workspace (`{work_dir}`)
 
 Agents used to be told to fetch each changed file themselves. Seven agents over nine changed files is up to sixty-three `git show` calls for sixty-three copies of the same nine files, and those calls run serially *inside* each agent, so they land straight on the review's wall-clock. Fetch once here and pass the path.
 
@@ -128,7 +128,7 @@ A file the PR **deletes** has no blob at the head ref. The `rm -f` leaves it abs
 
 Pass `{work_dir}` to every agent. `{source_ref}` still goes too: the workspace holds only the **changed** files, and an agent legitimately needs the rest of the tree for prevalence probes and sibling comparisons.
 
-**Tear it down after Step 9**, along with the ref — see the teardown in Step 1b.
+**Tear it down after Step 9**, along with the ref — see the teardown in Step 2.
 
 ---
 
@@ -284,7 +284,7 @@ Diff to review: {work_dir}/pr.diff
 
 **Launch these agents simultaneously:**
 
-Every agent additionally receives `{work_dir}` from Step 1c, `{source_ref}` from Step 1b and `{repo_facts}` from Step 4e.
+Every agent additionally receives `{work_dir}` from Step 3, `{source_ref}` from Step 2 and `{repo_facts}` from Step 4e.
 
 | Agent | File | Model | Needs | Notes |
 |-------|------|-------|-------|-------|
