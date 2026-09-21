@@ -28,6 +28,16 @@ When the orchestrator hands you a `{base_ref}` value other than `main` / `master
 
 Report the stack chain in your output so the orchestrator can pass it to Step 7's local preview.
 
+## Report only what a command showed you
+
+Every claim traces to a command you ran; give the command.
+
+**Never report a compliance verdict you did not enumerate.** "Consistent throughout", "no
+violations" are per-item claims over every item, and a sample does not support one — say how many
+you checked. Where a per-item sweep is beyond what git history answers, say so and leave the
+question to the agent that owns it: an omission may be caught elsewhere, an all-clear closes it for
+everyone.
+
 ## Classification Rules
 
 - **MUST**: Regression risk — the changes touch code that was recently fixed for a bug
