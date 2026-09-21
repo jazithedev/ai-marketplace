@@ -4,18 +4,20 @@ Multi-agent code review skill for Claude Code. Simulates JaziTheDev's (Krzysztof
 
 ## What it checks
 
-| Phase | Agent | Concern |
-|---|---|---|
-| 1 | Scope analysis | Single reason for change — does the PR do one thing? |
-| 1 | Size analysis | Lines changed against discipline thresholds; suggested splits |
-| 2 | Project rules | Compliance with `CLAUDE.md` / `AGENTS.md` in the repo |
-| 2 | Bug & smell scan | Bugs, code smells, design issues |
-| 2 | Historical context | What `git log` / `git blame` tell us about the touched code |
-| 2 | Previous comments | Unaddressed feedback from earlier review rounds (PR mode only) |
-| 2 | Code documentation | Comment quality, naming, doc fitness |
-| 2 | Tactical DDD | Aggregates, value objects, invariants, policies |
-| 2 | Strategic DDD | Bounded contexts, modules, context maps |
-| 2 | Personal patterns | The 51 review patterns extracted from past reviews |
+| Agent | Concern |
+|---|---|
+| Scope analysis | Single reason for change — does the PR do one thing? |
+| Size analysis | Lines changed against discipline thresholds; suggested splits |
+| Project rules | Compliance with `CLAUDE.md` / `AGENTS.md` in the repo |
+| Bug & smell scan | Bugs, code smells, design issues |
+| Historical context | What `git log` / `git blame` tell us about the touched code |
+| Previous comments | Unaddressed feedback from earlier review rounds (PR mode only) |
+| Code documentation | Comment quality, naming, doc fitness |
+| Tactical DDD | Aggregates, value objects, invariants, policies |
+| Strategic DDD | Bounded contexts, modules, context maps |
+| Personal patterns | The 51 review patterns extracted from past reviews |
+
+They all run concurrently in one wave, so a review takes as long as its slowest agent rather than the sum. An agent is left out only when it is certain to have nothing to read — the DDD pair on a diff with no application code, history on files that are new in this PR — and every omission is listed under **Review Scope** in the preview, because a skipped agent that nobody declared is indistinguishable from one that found nothing.
 
 ## Modes
 
