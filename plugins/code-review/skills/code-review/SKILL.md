@@ -671,6 +671,24 @@ GitHub's review API rejects the **entire review** if any inline comment points a
 
 Why pre-validate: a single bad line on the batched review POST kills the whole submission with HTTP 422. Demoting to general findings is preferable to losing the entire post.
 
+#### Then validate the other direction — a General Finding must have earned it
+
+The check above only ever demotes. Run it in reverse immediately before the POST: for **every** entry in
+the General Findings bucket, assert that at least one of these holds —
+
+1. it carries no `file:line` at all (genuinely PR-level: scope, size, the description, a missing test, an absent file), or
+2. its file is not in the PR's `files` list, or
+3. its line is not in that file's valid RIGHT-side set.
+
+If none holds, the finding is inline-eligible and is sitting in the wrong bucket. Move it and re-run.
+
+**The usual cause is a `comments` array you never filled.** If the payload has `comments: []` while the
+body lists findings naming a file that *is* in the diff, the bucketing was skipped rather than applied.
+That is always a bug, never a shortcut — most often taken under time pressure, when anchoring each
+finding feels like the expensive part. It is the cheap part; the author reading thirty detached bullets
+and mapping them back to code by hand is the expensive part, and avoiding that is the entire reason
+Step 8 splits the buckets.
+
 #### Choosing the review event
 
 Pick the `event` value based on what's being posted, after the inline/general bucketing in the previous steps:
