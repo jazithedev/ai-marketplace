@@ -676,11 +676,26 @@ Why pre-validate: a single bad line on the batched review POST kills the whole s
 The check above only ever demotes. Run it in reverse immediately before the POST: for **every** entry in
 the General Findings bucket, assert that at least one of these holds —
 
-1. it carries no `file:line` at all (genuinely PR-level: scope, size, the description, a missing test, an absent file), or
-2. its file is not in the PR's `files` list, or
-3. its line is not in that file's valid RIGHT-side set.
+1. it points at no code in the diff at all (genuinely PR-level: scope, size, a coverage figure, the
+   description, a missing test, an absent file, a spec in another repository), or
+2. the code it points at is in a file that is not in the PR's `files` list, or
+3. the code it points at has no line in that file's valid RIGHT-side set — a deleted file, for instance,
+   has no RIGHT side and therefore cannot host a comment.
 
 If none holds, the finding is inline-eligible and is sitting in the wrong bucket. Move it and re-run.
+
+**Ask "does it point at code", not "does it quote a path".** A finding that names only a class, a method,
+a property or a constant — `ensureRepliable()`, `$reviews`, `ResponseNotGeneratedException` — points at
+code just as squarely as one that writes out `src/…/Foo.php:42`, and a check that greps for path-shaped
+strings sails straight past it. Resolve the symbol to the file that defines or uses it, then apply the
+three conditions above to *that* file.
+
+**A consolidated pattern is still an inline finding.** Section B of `consolidation-rules.md` merges the
+same pattern at many locations into one finding — that finding is anchored at the lowest `(file, line)`
+with its `consolidated_locations` rendered as a **Locations** list under the fix. It does **not** become a
+General Finding. "Named parameters are missing at six call sites" and "three AAA markers carry trailing
+prose" are the characteristic shape here: grouping them is right, moving the group into the body is not,
+because the reader then has six locations and no line to read them against.
 
 **The usual cause is a `comments` array you never filled.** If the payload has `comments: []` while the
 body lists findings naming a file that *is* in the diff, the bucketing was skipped rather than applied.
