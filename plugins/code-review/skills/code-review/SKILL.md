@@ -16,8 +16,7 @@ Every finding must be classified as **[Must]** (blocks merge), **[Optional]** (s
 code-review/
 ├── SKILL.md                              ← You are here (orchestrator)
 ├── agents/                               ← One file per review agent
-│   ├── scope-analysis.md                 # Agent A — PR scope check + description-vs-diff
-│   ├── size-analysis.md                  # Agent B — PR size check
+│   ├── scope-analysis.md                 # Agent A — PR scope + size discipline, description-vs-diff
 │   ├── project-rules.md                  # Agent 1 — CLAUDE.md/AGENTS.md + reviewer-memory rules
 │   ├── bug-smell-scan.md                 # Agent 2 — Bugs & design smells
 │   ├── historical-context.md             # Agent 3 — Git history + stacked-PR awareness
@@ -73,6 +72,20 @@ gh pr view <PR> --json files --jq '.files[].path'
 `gh pr diff` accepts neither `--stat` nor `--name-only` — both belong to `git diff`. The line-count totals come from the `additions` / `deletions` / `changedFiles` fields on `gh pr view --json` above, and the file list comes from that same call's `files` array. Verify any `gh` flag before writing it into this file: an invalid one fails loudly here, but the same mistake inside a `--jq` filter fails silently (see Step 8).
 
 In **local mode**: use `git diff HEAD` and `git diff HEAD --name-only` instead. Infer purpose from branch name and commit messages.
+
+**Derive `{size_verdict}` here — do not spend an agent on it.** The size thresholds in
+`references/pr-discipline.md` are arithmetic over two numbers this call already returned:
+
+```bash
+total=$(( additions + deletions ))      # local mode: git diff HEAD --shortstat
+# Target ≤200 · Acceptable ≤400 · Must split >400
+```
+
+Render it as a single line — `577 lines (+574/-3), 10 files — MUST_SPLIT` — and pass it to every
+agent with the other PR facts. Computing it once is not only cheaper than a model doing `a + b`
+per review; it is the only way the verdict cannot differ between two agents looking at one PR.
+Judging whether an over-threshold diff earns the *mechanical-uniformity exception* is a real call,
+and that stays with Agent A.
 
 ### Step 2: Make the PR's files readable (`{source_ref}`) — PR mode only
 
@@ -132,11 +145,11 @@ Pass `{work_dir}` to every agent. `{source_ref}` still goes too: the workspace h
 
 ---
 
-Phase 1 ends here. **Scope and size are reviewed by agents A and B in the single wave below, not in a separate pass.** They used to run first, behind a "continue anyway?" prompt; that gate cost a round of wall-clock on every review and never once stopped one, because a reviewer who asked for a review wants the findings either way. Discipline is still the most important feedback — Step 7 leads with it, and a FAIL is stated before anything else.
+Phase 1 ends here. **Size is already decided — `{size_verdict}` from Step 1. Scope, and any size exception, are reviewed by Agent A in the single wave below, not in a separate pass.** They used to run first, behind a "continue anyway?" prompt; that gate cost a round of wall-clock on every review and never once stopped one, because a reviewer who asked for a review wants the findings either way. Discipline is still the most important feedback — Step 7 leads with it, and a FAIL is stated before anything else.
 
 ---
 
-## Phase 2 — One parallel agent wave (up to 10 agents)
+## Phase 2 — One parallel agent wave (up to 9 agents)
 
 ### Step 4: Gather project context
 
@@ -288,8 +301,7 @@ Every agent additionally receives `{work_dir}` from Step 3, `{source_ref}` from 
 
 | Agent | File | Model | Needs | Notes |
 |-------|------|-------|-------|-------|
-| Agent A | `agents/scope-analysis.md` | **Haiku** | PR title, description, file list, diff | Scope verdict. Was a separate Phase 1 pass |
-| Agent B | `agents/size-analysis.md` | **Haiku** | `additions`, `deletions`, `changedFiles`, file list, diff | Size verdict. Was a separate Phase 1 pass |
+| Agent A | `agents/scope-analysis.md` | **Haiku** | PR title, description, file list, diff, `{size_verdict}` | Scope verdict, plus the size exception. Was a separate Phase 1 pass |
 | Agent 1 | `agents/project-rules.md` | Sonnet | `{rules}` + `{reviewer_rules}` + diff | |
 | Agent 2 | `agents/bug-smell-scan.md` | Sonnet | diff | |
 | Agent 3 | `agents/historical-context.md` | **Haiku** | file list + `{base_ref}` + `{default_branch}` | Git log/blame summarisation, stacked-PR aware |
@@ -425,8 +437,9 @@ Now render the local preview:
 
 {self-review banner from pre-pass 7B, if any}
 
-{discipline banner — when Agent A or B returned FAIL, state it here, before anything else:
- "⚠️ Scope: FAIL — {reason}" / "⚠️ Size: FAIL — {lines} lines, {threshold}", plus the suggested
+{discipline banner — when Agent A returned FAIL, or `{size_verdict}` is MUST_SPLIT with no
+ exception, state it here, before anything else:
+ "⚠️ Scope: FAIL — {reason}" / "⚠️ Size: FAIL — {size_verdict}", plus the suggested
  splits. Discipline is the most important feedback, so it leads. It no longer gates the review.}
 
 ### Review Scope
@@ -447,7 +460,8 @@ Now render the local preview:
 _Within **Required Changes**, **Suggestions**, and **Questions**, separate consecutive items with a blank line so the developer can scan findings one at a time before approving the post._
 
 ### PR Discipline
-{Agent A scope verdict and Agent B size verdict, with any suggested splits}
+{Agent A scope verdict and `{size_verdict}` from Step 1 — note the exception when Agent A granted
+one — with any suggested splits}
 
 ### Positive Observations
 - {things done well, from Agent 8. Omit section if none}
