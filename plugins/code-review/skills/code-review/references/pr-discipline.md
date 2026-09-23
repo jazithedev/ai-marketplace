@@ -24,6 +24,9 @@ Every pull request must have exactly **one reason for change**. Valid categories
 
 ## Size Limits
 
+The orchestrator applies this table in Step 1 and passes the result as `{size_verdict}`. An agent
+reads the table only to judge the exception below — never to recompute the threshold.
+
 | Threshold        | Lines Changed (additions + deletions) | Action                 |
 |------------------|---------------------------------------|------------------------|
 | Target           | ≤ 200                                 | Ideal size             |
