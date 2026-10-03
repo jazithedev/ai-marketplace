@@ -12,6 +12,7 @@ The orchestrator runs these rules in order, on the in-memory findings list. Ther
 2. **Default missing classifications** — derive from `materiality`: MUST for high, OPTIONAL for medium, QUESTION for low. No finding leaves Step 6 unclassified.
 3. **Same-agent dedup** — within one agent's output, merge findings whose `(file, line)` AND `pattern_essence` match. Keep the more detailed body.
 4. **Cross-agent dedup with disagreement handling** — see [Section A](#section-a--cross-agent-dedup-g7--g4) below. Runs over `survivors ∪ pending`; afterwards, any pending finding whose post-convergence `certainty` reached 80 rejoins the working set and the rest are dropped.
+4b. **Multi-PR group unit only — attribute and split per PR** — see `multi-pr-grouping.md` § Step 6, step 5b. Every sub-step below then runs once per PR, so a merged Locations list never spans two PRs.
 5. **Pattern consolidation** — see [Section B](#section-b--pattern-consolidation-g1) below.
 6. **Prevalence calibration** — see [Section C](#section-c--prevalence-calibration-g3) below.
 7. **Memory-premise verification** — see [Section C-bis](#section-c-bis--memory-premise-verification-g9) below.
@@ -373,6 +374,8 @@ After all consolidation passes, each finding in the cleaned list has the followi
     "verdict": "holds" | "fails" | "unverifiable",
     "measurement": "<verbatim config excerpt or prevalence count>"
   },
+  "pr": <int>,                       // multi-PR group unit only — the PR this copy posts to (Step 6, 5b)
+  "related": [{"pr": 13, "file": "...", "line": N}],  // only on a cross-PR copy — its counterparts
   "file": "<path>",
   "line": <int>,
   "description": "<short title — rendered as the comment's subject line>",

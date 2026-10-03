@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: Multi-agent code review in JaziTheDev's style — PR discipline (single reason for change, size limits), bugs and design smells, project-rules and reviewer-memory compliance, historical context, and tactical/strategic DDD. Posts findings as inline GitHub review comments. Use when the user says "review this PR", "code review", "check this pull request", "review my changes", or similar. NOTE: invoke as "/code-review:code-review" — the bare "/code-review" is a Claude Code built-in that shadows this same-named plugin skill and runs a single-pass reviewer instead.
+description: Multi-agent code review in JaziTheDev's style — PR discipline (single reason for change, size limits), bugs and design smells, project-rules and reviewer-memory compliance, historical context, and tactical/strategic DDD. Posts findings as inline GitHub review comments. Given several PRs, first groups those that share a Work Item / ticket and reviews each group in one pass, while every PR still gets its own review. Use when the user says "review this PR", "review PRs 12 13 14", "code review", "check this pull request", "review my changes", or similar. NOTE: invoke as "/code-review:code-review" — the bare "/code-review" is a Claude Code built-in that shadows this same-named plugin skill and runs a single-pass reviewer instead.
 allowed-tools: Bash(gh *), Bash(git diff *), Bash(git log *), Bash(git status *), Bash(git blame *), Bash(git show *), Bash(git grep *), Bash(git fetch *), Bash(git merge-base *), Bash(git rev-parse *), Bash(git symbolic-ref *), Bash(git update-ref *), Read, Write, Agent
 ---
 
@@ -32,6 +32,7 @@ code-review/
     ├── ddd-expert-knowledge-base.md      # Canonical DDD reference (~54KB)
     ├── consolidation-rules.md            # Finding aggregation rules (G1, G3, G4, G7, G8)
     ├── comment-style.md                  # How a comment body is written (S7, S8)
+    ├── multi-pr-grouping.md              # Several PRs: group by ticket, review each group at once
     └── reviewer-memory-loading.md        # Auto-memory load + write-back (G5, S3)
 ```
 
@@ -42,8 +43,18 @@ Each agent reads only its own instructions + the reference files it needs. This 
 The user may provide:
 - A PR number (e.g., `#123`, `123`) → **PR mode**
 - A PR URL (e.g., `https://github.com/org/repo/pull/123`) → **PR mode**
+- Two or more PR numbers / URLs → **Multi-PR mode** (see below)
 - Nothing → **Auto-detect mode** (see below)
 - Explicit "review my changes", "review local changes" → **Local mode**
+
+### Multi-PR mode
+
+When the request names two or more PRs, read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/multi-pr-grouping.md`
+**before Step 1**. It adds a Phase 0 that groups the PRs by shared Work Item / ticket and lays out
+each group, and it states what changes inside Steps 1–8 for a group. PRs that share a ticket are
+reviewed in **one** agent wave, so the agents see the seams between them, and the result is split
+back so **every PR still receives its own review**. A PR that shares no ticket with another requested
+PR is a solo unit and takes the flow below unchanged. `--no-group` turns grouping off.
 
 ### Auto-detect logic
 
@@ -265,7 +276,7 @@ gh api repos/{owner}/{repo}/pulls/{pr} --jq '.head.sha'
 
 ### Step 5: Launch all review agents in parallel
 
-Launch all agents in a **single message** so they run concurrently. **Model selection is per-agent** — see the table below. In **local mode**, skip Agent 4.
+Launch all agents in a **single message** so they run concurrently. In multi-PR mode this is one wave **per review unit**, and units run two at a time (see `multi-pr-grouping.md` § Scheduling). **Model selection is per-agent** — see the table below. In **local mode**, skip Agent 4.
 
 Pattern-checking agents that produce structured output run on **Haiku** (cheaper, fast, sufficient for rule-matching). Judgement-heavy agents that reason about design, intent, and DDD concepts run on **Sonnet**.
 
@@ -355,6 +366,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/consolidation-rules.md
 3. **Default missing classifications** — derive from `materiality`: MUST for high, OPTIONAL for medium, QUESTION for low. No finding leaves Step 6 unclassified.
 4. **Same-agent dedup** — within one agent's output, merge findings whose `(file, line)` AND `pattern` match.
 5. **Cross-agent dedup with disagreement handling (G7 + G4-pre + G4)** — see Section A of `consolidation-rules.md`. Two findings dedup when location matches AND descriptions share Jaccard similarity ≥ 0.5 on token bigrams AND pattern matches. Then split disagreements by kind: a **factual** dispute (agents assert incompatible things about the repo) is settled by measuring it yourself per **G4-pre** and classifying once from the fact, with the measurement carried into the posted body — weakest-wins must not arbitrate a question that has a right answer. Only a genuine **severity** dispute falls through to G4: pick the weakest (QUESTION beats OPTIONAL beats MUST) and annotate the finding with the disagreement (shown only in the local preview). **Independent agreement raises `certainty`** — see Section A's convergence rule; three agents arriving at the same observation separately is evidence, not noise.
+5b. **Multi-PR group unit only — attribute and split per PR.** Run step 5b of `multi-pr-grouping.md` § Step 6: blame decides which PR owns a stacked line, cross-PR findings get one copy per involved PR, and sub-steps 6–12 then run **per PR**.
 6. **Pattern consolidation (G1)** — see Section B of `consolidation-rules.md`. Group remaining findings by `(pattern, classification)`. For any group with size ≥ 2 whose `suggested_fix` shapes are identical modulo identifier substitution, merge into a single finding anchored at the lowest (file, line). The merged body lists every location.
 7. **Prevalence calibration (G3)** — see Section C of `consolidation-rules.md`. For every finding with `pattern_kind: "convention"`, run a codebase-prevalence probe via `grep` against a structurally-similar file glob. Reclassify: ≥0.8 keep MUST, 0.5–0.8 downgrade to Optional, <0.5 drop. Skip the probe for `pattern_kind ∈ {bug, project-rule, memory}`.
 7b. **Memory-premise verification (G9)** — see Section C-bis of `consolidation-rules.md`. For every finding with `pattern_kind: "memory"` whose rule body asserts a **falsifiable claim about the codebase**, verify that claim before allowing `[Must]`. If the premise is false, downgrade to `[Optional]`, state both the rule and the contradicting measurement in the body, and raise a memory-correction candidate in Step 9. Memory rules that assert only a preference (no factual premise) are unaffected and keep their prevalence bypass.
@@ -624,6 +636,8 @@ General Findings are the same findings as the inline ones. They only failed the 
 - Confirmations of Existing Threads (those go inside the threads themselves; see the harness-denial fallback for the one exception)
 
 If the General Findings section has more than ~10 entries, wrap the Suggestions and Questions subsections in `<details><summary>…</summary>…</details>` so the comment stays readable.
+
+**Multi-PR group unit:** the second line of the body names the PRs reviewed together — see `multi-pr-grouping.md` § Step 8. The marker line itself never changes.
 
 **Auto-generation notice scope.** The `_This code review was made automatically by Krzysztof Trzos Code Review AI Skill._` line goes in the top-level body **only**. Do not append it to inline comment bodies, threaded replies, or any other artefact — one notice on the review is enough; repeating it on every comment is noise.
 
@@ -914,6 +928,7 @@ This mode skips Phases 1 and 2 entirely. It addresses author responses on the sk
 - **Deduplicate across agents.** Same issue from multiple agents → keep the most detailed, note agreement.
 - **Agents disagreeing about a fact is a measurement task, not a voting task.** When two agents assert incompatible things about the repo — a convention is already established, a sibling PR already landed, a symbol exists — go and measure it (`git merge-base --is-ancestor`, `git grep` at an explicit ref, `gh pr view --json baseRefName`), then classify once from the result and put the measurement in the finding. Never let the weakest-wins tiebreak stand in for an answer you could have looked up.
 - **Your own measurement is not exempt.** Authoritative *to the agents* is not the same as correct. When yours contradicts a command-backed finding, re-derive it another way before dismissing it — a perfectly clean result is the likeliest to be measuring the wrong thing. See G4-pre in `references/consolidation-rules.md`.
+- **Group by ticket, post per PR.** Several requested PRs that share a Work Item / ticket are reviewed in one wave, but each one gets its own findings, discipline verdict, event and review. Sizes are never summed (`multi-pr-grouping.md`).
 - **PR discipline comes first.** Scope/size violations are the most important feedback.
 - **Don't nitpick style** if the project has a formatter/linter (ECS, PHP-CS-Fixer).
 - **State review scope** when not reviewing everything: "Checked only Deptrac files."

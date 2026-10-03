@@ -166,3 +166,36 @@ End your output with an **Obstacles Encountered** line: setup issues, commands n
 environment quirks, anything the next step would otherwise rediscover. Write "None" if there were
 none. A wrong assumption you had to correct mid-review belongs here too — it tells the orchestrator
 which of your conclusions were hard-won.
+
+## 7. In a group unit, say which PR a finding belongs to
+
+When the orchestrator hands you `{work_dir}/unit.md`, you are reviewing several PRs that share one
+ticket, in one pass. Read the manifest first: it lists the members, how they are laid out and which
+PRs are **context only** (gaps). Then report as usual, with one extra field and one rule about line
+numbers:
+
+```
+prs: [14]                                   # the member(s) whose change the finding is about
+file: src/Foo/Handler.php                   # repo-relative — strip the files/<N>/ prefix
+line: 42                                    # numbered as in the file you read under files/<N>/
+```
+
+- **Line numbers follow the file you read.** In a stack component that is the top PR's tree, even when
+  the line came from a lower PR. The orchestrator maps it to the owning PR by `git blame`, so do not
+  translate it yourself.
+- **Use `pr.diff` to tell whose change it is.** Each section is one PR's own change. A finding on code
+  from a `CONTEXT ONLY` section is not reportable here. That PR is reviewed in its own unit.
+- **Cross-PR findings are the reason this mode exists.** When the problem lives in how two members fit
+  together — one adds an interface and the other implements it wrongly, both add the same helper, one
+  renames what the other still calls — list every involved member and give each its own location:
+
+  ```
+  prs: [12, 13]
+  locations_by_pr:
+    12: { file: src/Foo/FooInterface.php, line: 18 }
+    13: { file: src/Foo/Handler.php, line: 42 }
+  fix_lands_on: [13]                        # whose code has to change; both if either side could
+  ```
+
+- Scope and size still belong to one PR each. A ticket split across PRs is not a defect, so never
+  report "these PRs together are too big".

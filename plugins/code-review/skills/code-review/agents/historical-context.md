@@ -26,6 +26,11 @@ When the orchestrator hands you a `{base_ref}` value other than `main` / `master
 3. When the current PR follows a convention established earlier in the stack — even if it differs from the default branch — that is correct stack-internal consistency, not a violation. Note this explicitly so other agents don't flag it.
 4. When the current PR diverges from a convention established earlier in the stack, flag it as `OPTIONAL` (or `MUST` if the divergence is large) with `pattern: stack-consistency`.
 
+In a **group unit** (`{work_dir}/unit.md` is present) the chain is already in the manifest, gap PRs
+included. Lower members of the same unit count as "earlier in the stack" here, and conventions they
+establish are the baseline for the members above them. Gap PRs are context: read their commits, never
+report on them.
+
 Report the stack chain in your output so the orchestrator can pass it to Step 7's local preview.
 
 ## Report only what a command showed you
