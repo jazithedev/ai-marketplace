@@ -34,6 +34,24 @@ recompute it.
    700-line feature is. Set `SIZE_EXCEPTION` accordingly and say which kind of uniformity applies.
 10. **Description-vs-diff cross-check (S1):** extract from the description (a) filenames matching `[A-Z][A-Za-z0-9_]+\.(php|ts|tsx|js|py|go|java|rb)`, (b) class names in PascalCase (with or without `::class`), (c) specific behaviour claims ("now does X", "renamed Y to Z"). For each extracted token, verify it appears in the diff (file paths and content). Emit a `description-vs-diff-mismatch` finding for any token that's in the description but absent in the diff. Common cause: author renamed a file/class within the PR but didn't update the description. Classification: `OPTIONAL`, anchor it as a PR-level General Finding (no file:line).
 
+## Group units
+
+When you receive `{work_dir}/unit.md`, several PRs that share one ticket are under review together.
+Judge **each member separately**. Give each member its own CATEGORY, SCOPE_PASS, SIZE_EXCEPTION,
+VIOLATIONS, SUGGESTED_SPLITS and DESCRIPTION_MISMATCHES block, headed `### PR #N`, against its own
+entry in `{size_verdicts}`.
+
+The siblings are context that makes each verdict more accurate:
+
+- A member that is one coherent slice of the ticket — the domain model, then the endpoint, then the
+  UI — **passes**, even though the ticket as a whole spans categories. Splitting a ticket this way is
+  what PR discipline asks for.
+- A member carrying work that clearly belongs to a sibling (the second PR quietly finishes the first
+  PR's refactor) is a scope violation **on that member**. Name the sibling in SUGGESTED_SPLITS.
+- Never add the members' sizes together, and never report a member for being one of several.
+
+Gap PRs (marked context only in `unit.md`) get no verdict.
+
 ## Output Format
 
 Return a structured assessment:

@@ -22,6 +22,7 @@ They all run concurrently in one wave, so a review takes as long as its slowest 
 ## Modes
 
 - **PR mode** — `/code-review:code-review #123`, `/code-review:code-review 123`, or `/code-review:code-review https://github.com/org/repo/pull/123`. Fetches the PR via `gh`, reviews the diff, and posts inline comments — signed immediately when the verdict is a clean approval, otherwise left as a pending draft for you to submit.
+- **Multi-PR mode** — `/code-review:code-review 12 13 14`. PRs that share a Work Item / ticket (a Jira key in the branch, title or body, or a linked GitHub issue) are reviewed together in one agent wave, so the agents see how the PRs fit together. A stack is read at its top PR and each finding is traced back to the PR that wrote the line by `git blame`. PRs that are not stacked are placed side by side. Every PR still gets its own review, with its own discipline verdict and status, plus one line saying which PRs it was checked with. Units run two at a time; `--no-group` turns grouping off.
 - **Local mode** — `/code-review:code-review` (with no argument and no open PR for the branch). Reviews uncommitted local changes via `git diff HEAD`.
 - **Auto-detect** — `/code-review:code-review` chooses the mode based on `git status` and whether an open PR exists for the current branch.
 
@@ -40,6 +41,7 @@ Users of this marketplace can install via:
 /code-review:code-review #123       # review a specific PR
 /code-review:code-review 123        # same — bare PR number
 /code-review:code-review <pr-url>   # review by URL
+/code-review:code-review 12 13 14   # several PRs — grouped by shared ticket
 ```
 
 The skill also activates automatically when you say "review this PR", "code review", "check this pull request", or "review my changes".
