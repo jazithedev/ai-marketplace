@@ -27,7 +27,7 @@ code-review/
 │   └── jazi-craftsmanship.md             # Agent 8 — Jazi's personal patterns
 └── references/                           ← Loaded by agents or orchestrator as needed
     ├── pr-discipline.md                  # PR scope/size rules
-    ├── jazi-review-patterns.md           # 51 personal review patterns
+    ├── jazi-review-patterns.md           # 52 personal review patterns
     ├── ddd-review-checklist.md           # DDD tactical & strategic checklist
     ├── ddd-expert-knowledge-base.md      # Canonical DDD reference (~54KB)
     ├── consolidation-rules.md            # Finding aggregation rules (G1, G3, G4, G7, G8)
