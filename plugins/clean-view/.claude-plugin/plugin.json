@@ -1,0 +1,13 @@
+{
+  "name": "clean-view",
+  "description": "A calm view of Claude Code for non-technical users — tool calls, diffs and command output are hidden while one checklist above the prompt shows the plan, the current step and its progress. Toggle with the button or /simple.",
+  "version": "0.2.0",
+  "author": {
+    "name": "Krzysztof Trzos"
+  },
+  "license": "MIT",
+  "keywords": ["mod", "ui", "checklist", "progress", "non-technical"],
+  "types": "./types/index.d.ts",
+  "repository": "https://github.com/jazithedev/ai-marketplace",
+  "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/clean-view"
+}
