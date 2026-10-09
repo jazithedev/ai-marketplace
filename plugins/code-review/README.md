@@ -54,12 +54,14 @@ The skill also activates automatically when you say "review this PR", "code revi
 
 For every finding the skill produces:
 
-- **Classification** — `[Must]` (blocks merge), `[Optional]` (suggestion), `[Question]` (asks the author for rationale). Every badge is bracketed and carries a single leading capital.
+- **Classification** — `[Must]` (blocks merge), `[Optional]` (suggestion), `[Question]` (asks the author for rationale). Every badge is bracketed and carries a single leading capital. There is no separate subject line: the badge opens the comment and is followed directly by a sentence stating the finding (for a `[Question]`, the question itself), so the author never reads the verdict twice.
 - **Certainty** — is the observation factually true of the code? Findings below 80 are filtered out. Scored separately from importance, so a definitely-present nitpick becomes an `[Optional]` instead of being dropped, and a serious-but-speculative hunch doesn't post as a `[Must]`
 - **Materiality** — how much it matters, which is what drives the classification
 - **File and line** — every inline-postable finding points at a real `file:line` **that this PR adds or modifies**; pre-existing violations are context, never an ask
 - **Suggested fix** — present whenever there is something concrete to propose, which is nearly always for a `[Must]`
 - **Why** — the full argument, folded into a collapsed `<details>` block so it costs nothing to skip. Included when it carries evidence the problem and the fix have not already given, and dropped when it would only repeat them
+
+Each posted finding also carries a hidden `<!-- sig: pattern:identifier -->` marker. GitHub does not render it; the next review run uses it to recognise its own earlier comments and react or reply in those threads instead of posting duplicates.
 
 Findings are read against the PR head, fetched into a local ref, so reviews work on **stacked PRs** whose files don't exist on the branch you have checked out.
 

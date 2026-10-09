@@ -400,7 +400,8 @@ For each finding:
 - Split the remaining `body` into **`problem`** and **`why`**. `comment-style.md` § 2 sets what belongs in each and how long the problem may run; it is the only place those limits are written, so they cannot drift from the guide.
 - Rewrite both under the plain-English rules in `comment-style.md` § 3.
 - Return `suggested_fix` as well. Keep it as code wherever code says it, and compress a block over 10 lines with `// …`. It renders outside the fold, so its length is what the reader pays.
-- Set `why` to `null` when it would only restate the subject, the problem or the fix. An empty fold is worse than no fold.
+- Set `why` to `null` when it would only restate the problem or the fix. An empty fold is worse than no fold.
+- The posted comment has no subject line. The finding's `description` is passed in as `subject` only as a guide: the first sentence of `problem` must state that same finding (a `[Question]`: ask the question), because the badge is followed directly by it. Nothing may be dropped on the grounds that the subject already says it — the author never sees the subject.
 
 **This pass restructures; it does not compress.** Every file path, identifier, number, measurement and quoted string in the input body must still appear in the output, most of it inside `why`. Do not compress bodies by a percentage. That deletes exactly the evidence an author needs when they push back on a finding. The reading burden is solved by folding the argument away, not by throwing it out, so a fenced code block inside `body` is kept whole: the fold makes its length free. What may legitimately go is padding — greetings, softeners ("I think", "It seems", "perhaps"), and sentences that restate the sentence above them.
 
@@ -414,8 +415,8 @@ Read ${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/comment-style.md, secti
 You are reformatting code-review findings. Each arrives as one block of argument. Split it so the reader gets the verdict immediately and the evidence only if they want it.
 
 For each input finding return:
-- "problem": what is wrong, and what happens because of it, within the length section 2 sets. It must stand alone: a reader who sees only the subject and this still knows what is broken. No call chains, no measurements, no prior-review history, no rejected alternatives - those are evidence.
-- "why": everything else from the body, rewritten. Use null if nothing is left that the subject, problem or suggested_fix has not already said.
+- "problem": what is wrong, and what happens because of it, within the length section 2 sets. Its first sentence states the finding that "subject" names - the verdict, not background. For a finding whose subject is a question, the first sentence is that question, ending in "?". The subject is never shown to the reader, so "problem" must stand alone: a reader who sees only this still knows what is broken. No call chains, no measurements, no prior-review history, no rejected alternatives - those are evidence.
+- "why": everything else from the body, rewritten. Use null if nothing is left that problem or suggested_fix has not already said.
 - "suggested_fix": the input fix, kept as code wherever code says it. Compress a fenced block over 10 lines with `// ...`. Return it unchanged when there is nothing to compress. When a snippet itself contains a fenced block, open the outer fence with four backticks - a three-backtick outer fence is closed early and swallows everything after it.
 
 If the body ends with a `Locations to fix:` bullet list, drop it entirely. It is rendered separately, outside the fold, and must not appear in "why".
@@ -430,9 +431,9 @@ Input (JSON):
 Return: JSON array with the same `id` values and the `problem`, `why` and `suggested_fix` fields. Output must be valid JSON, nothing else.
 ```
 
-**Validation.** For each returned finding, check that every backtick-quoted token and every number present in the input `body` also appears across `subject` + `problem` + `why` + `suggested_fix` combined. Check all four, not only the two this pass rewrites: the prompt lets the model drop from `why` whatever the subject or the fix already said, so a check scoped to `problem` + `why` would fail a correct split. A miss means the pass dropped evidence, so treat that finding as failed.
+**Validation.** For each returned finding, check that every backtick-quoted token and every number present in the input `body` also appears across `problem` + `why` + `suggested_fix` combined. Check all three, not only the two this pass rewrites: the prompt lets the model drop from `why` whatever the fix already said, so a check scoped to `problem` + `why` would fail a correct split. Do not count `subject`: it is never posted, so a token that survives only there never reaches the author. A miss means the pass dropped evidence, so treat that finding as failed.
 
-**Fallback, in order.** If the batched response is not valid JSON, or the `id` set doesn't match, or a finding fails validation: retry those findings with per-finding Haiku calls. If that fails too, put the original body in `why` and set `problem` to `See the detail below.`, so the fold still holds on the degraded path — never put an unshaped body in `problem`, which always renders unfolded and would reproduce the wall of text this pass exists to remove. When it is the whole batched response that is unparseable there are no `id` values to retry individually, so retry the batch once before falling through. Never block the preview on this pass — a comment in the old shape still gets read; a review that never posts does not.
+**Fallback, in order.** If the batched response is not valid JSON, or the `id` set doesn't match, or a finding fails validation: retry those findings with per-finding Haiku calls. If that fails too, put the original body in `why` and set `problem` to the finding's `description` as a sentence, so the badge is still followed by the verdict and the fold still holds on the degraded path — never put an unshaped body in `problem`, which always renders unfolded and would reproduce the wall of text this pass exists to remove. When it is the whole batched response that is unparseable there are no `id` values to retry individually, so retry the batch once before falling through. Never block the preview on this pass — a comment in the old shape still gets read; a review that never posts does not.
 
 Keep each finding's original body as `body_raw` so the reviewer can request the unshaped version during `edit`.
 
@@ -470,6 +471,8 @@ Now render the local preview:
 *(Omit rows with count 0. Omit the whole table when zero findings posted.)*
 
 _Within **Required Changes**, **Suggestions**, and **Questions**, separate consecutive items with a blank line so the developer can scan findings one at a time before approving the post._
+
+_`{subject}` below is the finding's `description`. It exists only in this preview, so the reviewer can triage a long list one line per finding. The posted comments have no subject line (Step 8)._
 
 ### PR Discipline
 {Agent A scope verdict and `{size_verdict}` from Step 1 — note the exception when Agent A granted
@@ -601,8 +604,7 @@ _This code review was made automatically by Krzysztof Trzos Code Review AI Skill
  Omit the General Findings heading if there are none.}
 
 ### Required Changes
-- [{certainty}%] [Must] **{subject}**
-  {problem — 1–3 sentences}
+- [{certainty}%] **[Must]** {problem — 1–3 sentences, the first states the finding} <!-- sig: {signature} -->
   **Suggested fix:** {concrete alternative}
   **Locations:** {from `consolidated_locations`, only when G1 merged this finding}
 
@@ -614,16 +616,14 @@ _This code review was made automatically by Krzysztof Trzos Code Review AI Skill
   </details>
 
 ### Suggestions
-- [{certainty}%] [Optional] **{subject}**
-  {problem — 1–3 sentences}
+- [{certainty}%] **[Optional]** {problem — 1–3 sentences, the first states the finding} <!-- sig: {signature} -->
   **Suggested fix:** {concrete alternative, when there is one}
 
 ### Questions
-- [{certainty}%] [Question] **{subject}**
-  {what is unclear — 1–3 sentences}
+- [{certainty}%] **[Question]** {the question, then what is unclear — 1–3 sentences} <!-- sig: {signature} -->
 ```
 
-General Findings are the same findings as the inline ones. They only failed the diff-line check, so they use the same four parts and the same writing rules. The `Why` fold is shown above only under Required Changes because that is where it usually lands, but a Suggestion or a Question carries one on the rare occasion it has evidence to fold. Read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/comment-style.md` before writing them, and drop any section that has nothing to put in it.
+General Findings are the same findings as the inline ones. They only failed the diff-line check, so they use the same four parts and the same writing rules — including no subject line. Separate consecutive items with a blank line; the bold badge marks where each one starts. The `Why` fold is shown above only under Required Changes because that is where it usually lands, but a Suggestion or a Question carries one on the rare occasion it has evidence to fold. Read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/comment-style.md` before writing them, and drop any section that has nothing to put in it.
 
 **The template above is exhaustive.** The top-level body contains exactly: the auto-generation notice, Summary table, PR Discipline, Positive Observations, and General Findings. Nothing else.
 
@@ -648,9 +648,7 @@ If the General Findings section has more than ~10 entries, wrap the Suggestions 
 Each inline finding posts to its file:line with a body like:
 
 ````markdown
-**🔴 [Must]** — {subject}
-
-{problem — 1–3 sentences: what is wrong, and what happens because of it}
+**🔴 [Must]** {problem — 1–3 sentences: the first states the finding, the rest what happens because of it}
 
 **Suggested fix:**
 ```{lang}
@@ -670,7 +668,10 @@ Each inline finding posts to its file:line with a body like:
 </details>
 
 _Certainty: {N}% · Pattern: {name} · Agents: {which agreed}_
+<!-- sig: {signature} -->
 ````
+
+There is no subject line: the badge is followed directly by the problem, with no em dash between them. The `<!-- sig: … -->` marker is the last line. GitHub does not render it; the next run reads it to recognise this comment (`comment-style.md` § 2, Signature marker).
 
 Use the badge that matches the classification:
 - `**🔴 [Must]**` for required changes

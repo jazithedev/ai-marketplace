@@ -31,9 +31,7 @@ is a sentence that gets skipped.
 ## 2. The skeleton
 
 ````markdown
-**{badge}** — {subject}
-
-{problem: 1–3 sentences}
+**{badge}** {problem: 1–3 sentences, the first one states the finding}
 
 **Suggested fix:**
 ```{lang}
@@ -48,40 +46,51 @@ is a sentence that gets skipped.
 </details>
 
 _Certainty: {N}% · Pattern: {name} · Agents: {which agreed}_
+<!-- sig: {signature} -->
 ````
 
 Badges: `**🔴 [Must]**`, `**🟡 [Optional]**`, `**🔵 [Question]**`. Always in square
 brackets, always a single leading capital. Three badges that look alike are three badges the eye can
 sort without reading them.
 
+**There is no subject line.** The badge and the first sentence of the problem share a line, joined by
+a single space — no em dash. Every line an author reads costs them time, and a one-line subject
+followed by a problem that opens with the same point makes them read the verdict twice. The finding's
+`description` still exists as a short title, but it is internal: it labels the finding in the Step 7
+preview and guides the Step 7A rewrite. It is never posted.
+
 **Every badge uses this same skeleton.** A section with nothing to put in it is dropped, not padded.
 In practice:
 
 | Section | [Must] | [Optional] | [Question] |
 |---|---|---|---|
-| Subject | always | always | always |
-| Problem | always | always | always — state what is unclear |
+| Problem | always | always | always — the question, then what is unclear |
 | Suggested fix | nearly always | usually | rarely — there is nothing to fix yet |
 | Why | often | sometimes | seldom |
 | Footer | always | always | always |
+| Signature marker | always | always | always |
 
 A General Finding is the one exception: its templates carry the certainty inline, as the leading
-`[{certainty}%]`, instead of a separate footer line.
-
-### Subject
-
-One line, under about fifteen words. It states the finding, not the topic. A reader scanning thirty
-comments decides from this line alone which ones to open, so it has to carry the verdict on its own.
-
-- `The rollback leaves the customer charged a report usage`, not `Rollback handling`.
-- `The budget is charged before the send job is queued`, not `Ordering issue in CampaignCreator`.
-
-It follows the same rules as the rest of the comment (§ 3): one idea, active voice, identifiers
-verbatim. It is a statement rather than a heading, so no title case and no trailing full stop.
+`[{certainty}%]`, instead of a separate footer line, and its badge has no emoji:
+`- [{certainty}%] **[Must]** {problem} <!-- sig: {signature} -->`. The bold badge marks where each
+item starts, and a blank line separates consecutive items.
 
 ### Problem — one to three sentences
 
 What is wrong, and what happens because of it. Under sixty words.
+
+**The first sentence states the finding.** It sits on the badge line, and a reader scanning thirty
+comments decides from that sentence alone which ones to read further, so it has to carry the verdict
+on its own. State the finding, not the topic:
+
+- `The rollback leaves the customer charged a report usage.`, not `Rollback handling is wrong here.`
+- `The budget is charged before the send job is queued.`, not `There is an ordering issue in CampaignCreator.`
+
+Sentences two and three give the consequence. Never open with background and build up to the
+verdict.
+
+**A `[Question]` opens with the question itself**, ending in `?`. At most two sentences of context
+follow. The author sees what they are asked to answer before anything else.
 
 This is the only part many readers will read. It must stand on its own: someone who never opens the
 Why still knows what is broken and roughly why it matters.
@@ -140,7 +149,7 @@ who pushes back deserves the whole case. Rewrite it plainly instead, using Secti
 that remains is fine, because it is folded away.
 
 **Omit the section entirely when you have no new evidence.** The test: can you write two sentences
-that say something the subject, problem and fix have not already said? If not, the expander is an
+that say something the problem and fix have not already said? If not, the expander is an
 empty box the reader opens for nothing, which is worse than no expander. Most `[Optional]` findings
 and nearly all `[Question]` findings fail this test.
 
@@ -160,6 +169,19 @@ fold. Disagreement annotations belong here too.
 
 It sits outside the fold because it qualifies the whole finding rather than the argument for it. A
 reader who never opens the `Why` still needs to know how sure the reviewer is.
+
+### Signature marker
+
+`<!-- sig: {signature} -->`, the very last line, after the footer. GitHub does not render HTML
+comments, so the author never sees it. The next review run reads it to recognise its own earlier
+comments (`agents/previous-comments.md` step 2), so it must be present on every posted finding.
+
+`{signature}` is `{pattern}:{identifier}`, lowercased: the finding's `pattern` and the main code
+identifier it is about, copied verbatim from the code — `positional-args:sendquotaresult::denied`.
+Both parts come from the code and the pattern name, not from prose, so a later run that raises the
+same problem on the same symbol produces the same signature even when it words the problem
+differently. When the finding names no code identifier (a PR-level finding such as a description
+mismatch), the signature is the pattern alone.
 
 ---
 
@@ -210,11 +232,9 @@ The finding as an agent hands it over (excerpt):
 The comment:
 
 ````markdown
-**🔴 [Must]** — The oversized-campaign branch reports `remaining: 0`, so the UI tells the customer something false
-
-This branch never asks the limiter how much budget is left, so it always reports `0`. The UI then
-tells the customer they used their whole allowance today. That is false for a customer who has sent
-nothing, and waiting 24 hours will not help them.
+**🔴 [Must]** The oversized-campaign branch reports `remaining: 0`, so the UI tells the customer
+something false. This branch never asks the limiter how much budget is left. The UI then tells a
+customer who has sent nothing that they used their whole allowance today.
 
 **Suggested fix:**
 ```php
@@ -247,16 +267,15 @@ reached from here.
 </details>
 
 _Certainty: 95% · Pattern: fabricated-remaining-budget · Agents: bug-smell-scan_
+<!-- sig: fabricated-remaining-budget:deny -->
 ````
 
 **Example B — an `[Optional]` with no Why worth opening.**
 
 ````markdown
-**🟡 [Optional]** — The refusal builders went back to positional arguments
-
-`denied()` takes `(tier, limit, remaining, paidDailyLimit)`. That is three `int`s in a row. Swapping
-`limit` and `remaining` still compiles, type-checks and passes the tests, and the factory swap dropped
-the named arguments the previous round added.
+**🟡 [Optional]** The refusal builders went back to positional arguments. `denied()` takes three
+`int`s in a row: `(tier, limit, remaining, paidDailyLimit)`. Swapping `limit` and
+`remaining` still compiles, type-checks and passes the tests.
 
 **Suggested fix:**
 ```php
@@ -266,20 +285,23 @@ SendQuotaResult::denied(tier: SendTier::Unpaid, limit: 100, remaining: 0, paidDa
 Same in `CreateTest.php:47` and `SendQuotaExceededExceptionTest.php:20` and `:37`.
 
 _Certainty: 90% · Pattern: positional-args · Agents: jazi-craftsmanship_
+<!-- sig: positional-args:sendquotaresult::denied -->
 ````
 
-There is no Why, because everything the argument needs is already in three sentences. Adding a fold
+There is no Why, because everything the argument needs is already in three sentences. The point
+that the previous round added named arguments is dropped from the problem: it is history, and it
+would only belong in a Why. Adding a fold
 here would cost the reader a click and give them nothing.
 
 **Example C — a `[Question]`, no fix, no Why.**
 
 ````markdown
-**🔵 [Question]** — Is the paid tier meant to keep its budget after a downgrade?
-
-Each tier has its own limiter, so a customer who spends the paid budget and then downgrades gets a
-fresh unpaid budget the same day. I could not tell from the diff whether that is intended.
+**🔵 [Question]** Is the paid tier meant to keep its budget after a downgrade? Each tier has its own
+limiter, so a customer who spends the paid budget and then downgrades gets a fresh unpaid budget the
+same day.
 
 _Certainty: 85% · Pattern: tier-change-budget-reset · Agents: bug-smell-scan_
+<!-- sig: tier-change-budget-reset -->
 ````
 
 ---
@@ -288,12 +310,15 @@ _Certainty: 85% · Pattern: tier-change-budget-reset · Agents: bug-smell-scan_
 
 For each comment:
 
+- [ ] No subject line: the badge is followed directly by the problem, with no em dash.
+- [ ] The problem's first sentence states the finding (a `[Question]`: asks the question).
 - [ ] Problem is three sentences or fewer, and makes sense on its own.
 - [ ] Suggested fix is a code block, or two sentences at most, or deliberately left out.
 - [ ] The Why either carries evidence the top does not, or is not there.
 - [ ] `<summary>Why</summary>`, with blank lines inside the `<details>`.
 - [ ] Section 3 run down: no metaphors, no stacked clauses, identifiers verbatim.
 - [ ] Footer present, on its own line, outside the fold.
+- [ ] `<!-- sig: … -->` present as the last line (a General Finding: at the end of its first line).
 
 If a comment still feels long after this, the usual cause is that it is two findings wearing one
 badge. Split it.
