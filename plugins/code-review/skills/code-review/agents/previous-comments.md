@@ -47,7 +47,7 @@ For each skill-authored review, build two collections: `prior_findings.inline` (
 ### Inline comments
 
 1. Fetch comments where `pull_request_review_id` equals the review's id.
-2. For each inline comment, extract the **finding signature**: the first non-empty line of the body, normalised — lowercase, badge emoji stripped (`🔴 / 🟡 / 🔵`), leading classification token (`must / optional / question`) and surrounding punctuation stripped, **square brackets included**. Bracketing the token is a presentation change this skill made partway through its life, so `**🔴 MUST** — x` and `**🔴 [Must]** — x` must normalise to the same key; if they don't, the next review stops recognising its own prior comments and re-posts all of them. The result is a topic key like `add // arrange / // act / // assert section comments to every test method`.
+2. For each inline comment, extract the **finding signature**. Since v1.7.0 every posted finding carries a hidden `<!-- sig: {signature} -->` marker (`references/comment-style.md` § 2, Signature marker). When the body has one, the signature is the marker's content, trimmed and lowercased; record `signature_kind: "marker"`. Comments posted before v1.7.0 have no marker and open with a subject line instead — for those, record `signature_kind: "legacy"` and take the first non-empty line of the body, normalised — lowercase, badge emoji stripped (`🔴 / 🟡 / 🔵`), leading classification token (`must / optional / question`) and surrounding punctuation stripped, **square brackets included**. Bracketing the token is a presentation change this skill made partway through its life, so `**🔴 MUST** — x` and `**🔴 [Must]** — x` must normalise to the same key; if they don't, the next review stops recognising its own prior comments and re-posts all of them. The result is a topic key like `add // arrange / // act / // assert section comments to every test method`.
 3. Look up each comment's **resolved state**. The REST endpoint doesn't expose `isResolved` on inline comments — use GraphQL:
 
    ```bash
@@ -83,14 +83,16 @@ For each skill-authored review, build two collections: `prior_findings.inline` (
 
 Each skill-authored review's body has a top-level `## General Findings` section, with `### Required Changes`, `### Suggestions`, and `### Questions` subsections. Parse each bullet under those subsections:
 
-- Each finding's first bolded title line is the **signature** (apply the same normalisation as inline comments).
-- Bullets without a clear signature line can be skipped.
+- When the bullet contains a `<!-- sig: {signature} -->` marker, its content is the **signature** (`signature_kind: "marker"`).
+- Otherwise the bullet predates v1.7.0: its first bolded title line is the signature (`signature_kind: "legacy"`, same normalisation as inline comments). A bullet whose only bold text is the badge (`**[Must]**`) and that has no marker has no signature.
+- Bullets without a signature can be skipped.
 
 Record entries:
 
 ```
 {"review_id": 4292478648,
- "signature": "pr description mismatch",
+ "signature": "description-vs-diff-mismatch",
+ "signature_kind": "marker",
  "classification": "OPTIONAL"}
 ```
 

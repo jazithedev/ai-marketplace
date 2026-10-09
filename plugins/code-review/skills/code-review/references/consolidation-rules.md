@@ -17,6 +17,7 @@ The orchestrator runs these rules in order, on the in-memory findings list. Ther
 6. **Prevalence calibration** — see [Section C](#section-c--prevalence-calibration-g3) below.
 7. **Memory-premise verification** — see [Section C-bis](#section-c-bis--memory-premise-verification-g9) below.
 8. **Match existing PR threads** — pre-existing logic in `SKILL.md` Step 6 sub-step 8. Unchanged.
+8b. **Compute each finding's `signature`** — `{pattern}:{identifier}`, lowercased: the finding's `pattern`, a colon, and the main code identifier it is about (the symbol at `file:line`, else the first backtick-quoted identifier in `description`), copied verbatim. Use the pattern alone when the finding names no code identifier. It is posted as the hidden `<!-- sig: … -->` marker (`comment-style.md` § 2) and is the key sub-step 9 matches on.
 9. **Match prior skill-authored reviews** — see [Section D](#section-d--prior-skill-review-suppression-g8b) below.
 10. **Collect positive observations + obstacles** — pre-existing logic. Unchanged.
 
@@ -193,9 +194,7 @@ Prefer to have the agent run this at Phase 2 time and report it (see SKILL.md St
 Say both things plainly. The author needs to know the ask is soft and why; the reviewer needs to see their own rule was contradicted.
 
 ```markdown
-**🟡 [Optional]** — <the rule's ask>
-
-I have a recorded preference for <rule>, so flagging it — but the stated basis doesn't
+**🟡 [Optional]** <the rule's ask, as a sentence>. I have a recorded preference for <rule>, so flagging it — but the stated basis doesn't
 hold here, so treat this as consistency-only rather than blocking:
 
 - <the measurement, verbatim: config excerpt, prevalence count>
@@ -236,8 +235,10 @@ _This code review was made automatically by Krzysztof Trzos Code Review AI Skill
 
 `prior_skill_findings`, produced by `agents/previous-comments.md` in Step 4c. It has two collections:
 
-- `prior_skill_findings.inline` — one entry per inline comment with `{comment_id, path, line, signature, classification, resolved}`
-- `prior_skill_findings.general` — one entry per General Finding parsed from the body with `{review_id, signature, classification}`
+- `prior_skill_findings.inline` — one entry per inline comment with `{comment_id, path, line, signature, signature_kind, classification, resolved}`
+- `prior_skill_findings.general` — one entry per General Finding parsed from the body with `{review_id, signature, signature_kind, classification}`
+
+`signature_kind` is `marker` for findings posted since v1.7.0, which carry a hidden `<!-- sig: … -->` marker, and `legacy` for older ones, whose signature is their normalised subject line.
 
 Both collections use the signature normalisation defined in `agents/previous-comments.md` step 2, including the reason it strips square brackets. Keep it stated there only — this file consumes that step's output rather than re-implementing it.
 
@@ -253,10 +254,12 @@ Build two indexes keyed by normalised signature:
 For each new candidate finding still in the working set after Step 6 sub-steps 1–8:
 
 ```
-sig = normalise(candidate.signature)
+# Marker entries were keyed by signature; legacy entries by their subject line, which was the
+# finding's description. Look the candidate up under both so pre-v1.7.0 threads still match.
+keys = [candidate.signature, normalise(candidate.description)]
 
 if candidate.bucket == "inline":
-    matches = inline_index.get(sig, [])
+    matches = first non-empty of inline_index.get(k, []) for k in keys
     unresolved = [m for m in matches if not m.resolved]
     same_file_unresolved = [m for m in unresolved if m.path == candidate.path]
 
@@ -275,7 +278,7 @@ if candidate.bucket == "inline":
         → Keep as fresh inline finding
 
 elif candidate.bucket == "general":
-    if sig in general_index:
+    if any(k in general_index for k in keys):
         # Case 4 — same rule already in the prior review body; re-listing is noise
         → Drop the candidate entirely
     else:
@@ -378,7 +381,8 @@ After all consolidation passes, each finding in the cleaned list has the followi
   "related": [{"pr": 13, "file": "...", "line": N}],  // only on a cross-PR copy — its counterparts
   "file": "<path>",
   "line": <int>,
-  "description": "<short title — rendered as the comment's subject line>",
+  "description": "<short title — labels the finding in the Step 7 preview and guides 7A; never posted>",
+  "signature": "<pattern>:<identifier> (set in sub-step 8b, posted as the hidden sig marker)",
   "body": "<full body including any Locations-to-fix list>",
   "pattern": "<pattern name>",
   "pattern_kind": "bug" | "convention" | "design" | "project-rule" | "memory",
