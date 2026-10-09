@@ -67,7 +67,7 @@ jobs:
           print('All plugin directories OK')
           "
 
-      - name: Check each plugin has at least one skill or command
+      - name: Check each plugin has at least one skill, command or hooks module
         run: |
           python3 -c "
           import json, os, sys, glob
@@ -78,12 +78,13 @@ jobs:
             if isinstance(source, str) and source.startswith('./') and os.path.isdir(source):
               skills = glob.glob(os.path.join(source, 'skills', '*', 'SKILL.md'))
               commands = glob.glob(os.path.join(source, 'commands', '*.md'))
-              if not skills and not commands:
-                errors.append(f\"Plugin '{p['name']}': no skills or commands found\")
+              hooks = os.path.isfile(os.path.join(source, 'hooks', 'hooks.json'))
+              if not skills and not commands and not hooks:
+                errors.append(f\"Plugin '{p['name']}': no skills, commands or hooks found\")
           if errors:
             print('\n'.join(errors))
             sys.exit(1)
-          print('All plugins have skills/commands OK')
+          print('All plugins have skills/commands/hooks OK')
           "
 
       - name: Check no duplicate plugin names
