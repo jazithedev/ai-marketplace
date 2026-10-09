@@ -42,6 +42,23 @@ allowed-tools: Bash(git diff:*), Read, Grep
 
 5. Submit a pull request.
 
+## Adding a Mod
+
+A mod changes Claude Code's own interface or behaviour (a pane, a band above the prompt, hooks on tool calls) instead of adding a skill. Its layout differs from a skill plugin:
+
+```
+plugins/my-mod/
+├── .claude-plugin/
+│   └── plugin.json
+├── hooks/
+│   ├── hooks.json        # { "modules": ["./register.tsx"] }
+│   └── register.tsx
+├── types/index.d.ts      # only when the mod keeps $.state values
+└── README.md
+```
+
+Check it with `claude plugin validate plugins/my-mod` and `claude plugin test plugins/my-mod` before submitting, then add the marketplace entry as above.
+
 ## Guidelines
 
 - One plugin per logical domain (e.g., git workflow, testing, deployment)
