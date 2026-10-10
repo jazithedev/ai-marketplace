@@ -117,7 +117,7 @@
     {
       "name": "clean-view",
       "description": "A calm view of Claude Code for non-technical users — tool calls, diffs and command output are hidden while one checklist above the prompt shows the plan, the current step and its progress. A mod (hooks plugin); toggle with the button or /simple.",
-      "version": "0.3.2",
+      "version": "0.3.3",
       "author": {
         "name": "Krzysztof Trzos"
       },
