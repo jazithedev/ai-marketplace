@@ -172,6 +172,18 @@ test('10. the card steps aside while a slash command is typed', async ($, on) =>
   expect(await band($)).toContain('Working on it')
 })
 
+test('11. the band draws beneath another mod instead of replacing it', async ($, on) => {
+  world(on)
+  on('ui.render', { component: 'AbovePrompt' } as any, (m$: any, e: any) => {
+    const { Text } = m$.ui.resolve(e)
+    return (globalThis as any).h(Text, {}, 'BELOW-MARK')
+  })
+  await $.turn.start({ text: 'Make my page', turnId: 't1' })
+  const drawn = await band($)
+  expect(drawn).toContain('BELOW-MARK')
+  expect(drawn).toContain('Working on it')
+})
+
 test('helpers: question and command detection', () => {
   expect(asksQuestion('Done. Want me to open the PR?')).toBe(true)
   expect(asksQuestion('Done.')).toBe(false)
