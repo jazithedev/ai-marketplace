@@ -230,6 +230,13 @@ export const registerCleanView = (on: On): void => {
     return next(e)
   })
 
+  // A local command (/model, /clear ...) empties the prompt without a prompt.submit,
+  // so the "command draft" flag has to be released here or the band stays hidden.
+  on('command.run', async ($, e, next) => {
+    if (await read($, isCommandDraft)) await update($, isCommandDraft, () => false)
+    return next(e)
+  })
+
   on('command.run', { command: 'simple' }, async ($, e) => {
     const arg = String((e as { args?: string }).args ?? '').trim().toLowerCase()
     const value = arg === 'on' ? true : arg === 'off' ? false : !(await read($, enabled))
