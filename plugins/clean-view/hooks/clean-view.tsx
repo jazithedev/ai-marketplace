@@ -436,12 +436,13 @@ export const registerCleanView = (on: On): void => {
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     if (e.props.hasSurvey) return next(e)
     const { Box, Text, Button } = $.ui.resolve(e)
-    // Draw beneath the mods below this one in the band (e.g. session-header) instead of replacing them.
+    // Keep the mods below this one in the band (e.g. session-header) instead of replacing them, and
+    // draw the card above them.
     const below = await next(e).catch(() => null)
     const stack = (band: any) => (
       <Box flexDirection="column">
-        {below}
         {band}
+        {below}
       </Box>
     )
     const isOn = await read($, enabled)
