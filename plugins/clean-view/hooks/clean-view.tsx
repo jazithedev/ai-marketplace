@@ -436,13 +436,21 @@ export const registerCleanView = (on: On): void => {
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     if (e.props.hasSurvey) return next(e)
     const { Box, Text, Button } = $.ui.resolve(e)
+    // Draw beneath the mods below this one in the band (e.g. session-header) instead of replacing them.
+    const below = await next(e).catch(() => null)
+    const stack = (band: any) => (
+      <Box flexDirection="column">
+        {below}
+        {band}
+      </Box>
+    )
     const isOn = await read($, enabled)
     const c = await read($, checklist)
     const frame = await read($, tick)
     const isCommand = await read($, isCommandDraft)
     const now = await $.clock.now()
 
-    if (isOn && isCommand) return <Box />
+    if (isOn && isCommand) return below ?? <Box />
 
     const button = (
       <Button
@@ -458,7 +466,7 @@ export const registerCleanView = (on: On): void => {
 
     // Nothing to show: the button alone, right-aligned under a blank line.
     if (!isShown) {
-      return (
+      return stack(
         <Box width={cardWidth} justifyContent="flex-end">
           {button}
         </Box>
@@ -495,7 +503,7 @@ export const registerCleanView = (on: On): void => {
 
     // Finished and folded: one line, still set apart by a blank line above.
     if (c.phase === 'done' && c.isCollapsed) {
-      return (
+      return stack(
         <Box marginTop={1} width={cardWidth} paddingX={1}>
           <Box width={inner}>
             <Box flexGrow={1}>{left}</Box>
@@ -509,7 +517,7 @@ export const registerCleanView = (on: On): void => {
     const nameWidth = Math.max(8, Math.min(MAX_NAME, inner - 2 - 1 - METER - 2 - LABEL))
     const first = c.tasks.find(x => x.status === 'upcoming')
 
-    return (
+    return stack(
       <Box
         marginTop={1}
         flexDirection="column"
