@@ -7,7 +7,7 @@
   },
   "metadata": {
     "description": "Community-driven collection of Claude Code skills, agents, and plugins for software development workflows",
-    "version": "1.12.0"
+    "version": "1.13.0"
   },
   "plugins": [
     {
@@ -126,6 +126,19 @@
       "keywords": ["mod", "ui", "checklist", "progress", "non-technical"],
       "license": "MIT",
       "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/clean-view"
+    },
+    {
+      "name": "session-header",
+      "description": "A bordered panel above the prompt with the session's essentials — worktree, branch and git state, model, permission mode, context use, cost, turns, age, rate limits and goal. A mod (hooks plugin); set the goal line with /goal.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Krzysztof Trzos"
+      },
+      "source": "./plugins/session-header",
+      "category": "productivity",
+      "keywords": ["mod", "ui", "status", "session", "header"],
+      "license": "MIT",
+      "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/session-header"
     }
   ]
 }

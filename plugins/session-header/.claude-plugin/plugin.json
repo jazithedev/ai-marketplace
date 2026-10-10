@@ -1,0 +1,13 @@
+{
+  "name": "session-header",
+  "description": "A bordered panel above the prompt with the session's essentials — worktree, branch and git state, model, permission mode, context use, cost, turns, age, rate limits and goal. A mod (hooks plugin); set the goal line with /goal.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Krzysztof Trzos"
+  },
+  "license": "MIT",
+  "keywords": ["mod", "ui", "status", "session", "header"],
+  "types": "./types/index.d.ts",
+  "repository": "https://github.com/jazithedev/ai-marketplace",
+  "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/session-header"
+}
