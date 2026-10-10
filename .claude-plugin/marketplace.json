@@ -7,7 +7,7 @@
   },
   "metadata": {
     "description": "Community-driven collection of Claude Code skills, agents, and plugins for software development workflows",
-    "version": "1.13.0"
+    "version": "1.14.0"
   },
   "plugins": [
     {
@@ -139,6 +139,21 @@
       "keywords": ["mod", "ui", "status", "session", "header"],
       "license": "MIT",
       "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/session-header"
+    },
+    {
+      "name": "filetree",
+      "description": "An IDE-style file tree for Claude Code in the right sidebar — git status, lines changed, and highlights on the files Claude reads, writes and commits. A mod (hooks plugin) from data-goblin; needs Claude Code 2.1.287+, /tui fullscreen and a terminal at least 110 columns wide.",
+      "author": {
+        "name": "Kurt Buhler"
+      },
+      "source": {
+        "source": "github",
+        "repo": "data-goblin/claude-code-filetree"
+      },
+      "category": "productivity",
+      "keywords": ["mod", "ui", "file-tree", "git", "pane"],
+      "license": "MIT",
+      "homepage": "https://github.com/data-goblin/claude-code-filetree"
     }
   ]
 }
