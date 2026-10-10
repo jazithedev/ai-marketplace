@@ -12,6 +12,7 @@ Build my landing page · 1m 12s                     [ ● Clean View: ON ]
 
 ## Features
 
+- **A card set apart from the chat** — a bordered box with a blank line above it, its colour following the state (cyan working, yellow needs you, red stuck, green done)
 - **One checklist** — job name and time running, each step with a 10-cell meter; a sweep animation until a percent is reported
 - **Plain states** — *Needs you* (permission prompts and questions), *Stuck* (denied permission, repeated failures, API errors in one calm sentence), *Stopped* (Esc), *All done* (shrinks to one line after 5 seconds)
 - **Hidden technical rows** — tool calls, results, groups and the background-run hint; Claude's written replies stay visible

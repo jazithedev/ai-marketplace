@@ -117,3 +117,18 @@ for (const surface of ['terminal', 'desktop'] as const) {
     expect(await ui.find({ key: 'toggle' })).toBeDefined()
   })
 }
+
+test('7. a running job is drawn as a bordered card set apart from the chat', async ($, on) => {
+  world(on)
+  await $.turn.start({ text: 'Make my page', turnId: 't1' })
+  const drawn = await band($)
+  expect(drawn).toContain('"borderStyle":"round"')
+  expect(drawn).toContain('"borderColor":"cyan"')
+  expect(drawn).toContain('"marginTop":1')
+  expect(drawn).toContain('"width":76')
+  // the name column is capped, so labels stay beside the names on a wide terminal
+  const wide = await $.ui.mount({
+    plugin: 'clean-view', surface: 'terminal', component: 'AbovePrompt', props: { ...AP, bodyColumns: 200 },
+  } as any)
+  expect(JSON.stringify(await wide.drawn())).toContain('"width":76')
+})

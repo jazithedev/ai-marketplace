@@ -27,6 +27,15 @@ const ALWAYS_ALLOWED = new Set([
 ])
 const MAX_NAME = 40
 const METER = 10
+const LABEL = 8
+const CARD_WIDTH = 76
+const PHASE_COLOR: Record<string, string> = {
+  working: 'cyan',
+  'needs-you': 'yellow',
+  stuck: 'red',
+  stopped: 'gray',
+  done: 'green',
+}
 
 // ---------- pure helpers (exported for tests) ----------
 
@@ -409,56 +418,92 @@ export const registerCleanView = (on: On): void => {
       />
     )
 
-    let left: any = null
-    if (isOn && c.phase !== 'idle') {
-      const took = formatElapsed((c.finishedAt ?? now) - c.startedAt)
-      if (c.phase === 'working') {
-        left = <Text bold>{c.title} · {took}</Text>
-      } else if (c.phase === 'needs-you') {
-        left = (
-          <Text>
-            <Text inverse bold> Needs you </Text> {c.needsYouReason}
-          </Text>
-        )
-      } else if (c.phase === 'stuck') {
-        left = <Text color="red">⚠ Stuck: {c.stuckReason}</Text>
-      } else if (c.phase === 'stopped') {
-        left = <Text dimColor>■ Stopped · {c.title} · you pressed Esc</Text>
-      } else {
-        left = <Text color="green">✓ All done · {c.title} · took {took}</Text>
-      }
-    }
+    const isShown = isOn && c.phase !== 'idle'
+    const cardWidth = Math.min(e.props.bodyColumns, CARD_WIDTH)
+    const inner = cardWidth - 4
 
-    const isShort = c.phase === 'done' && c.isCollapsed
-    const showRows = isOn && c.phase !== 'idle' && !isShort && c.tasks.length > 0
-    const isWaiting = c.phase === 'needs-you'
-    const nameWidth = Math.max(8, e.props.bodyColumns - 2 - METER - 2 - 9)
-
-    return (
-      <Box flexDirection="column">
-        <Box justifyContent="space-between">
-          <Box flexGrow={1}>{left}</Box>
+    // Nothing to show: the button alone, right-aligned under a blank line.
+    if (!isShown) {
+      return (
+        <Box width={cardWidth} justifyContent="flex-end">
           {button}
         </Box>
-        {showRows &&
-          c.tasks.map(t => {
-            const icon = t.status === 'done' ? '✓' : t.status === 'active' ? (isWaiting ? '‖' : '▶') : '○'
-            const first = c.tasks.find(x => x.status === 'upcoming')
-            const label =
-              t.status === 'done'
-                ? 'Done'
-                : t.status === 'active'
-                  ? t.hasReported ? `${t.percent}%` : 'Working'
-                  : t === first ? 'Next' : 'Up next'
-            const dim = t.status !== 'active'
-            return (
-              <Text key={t.id} dimColor={t.status === 'upcoming' || t.status === 'done'}>
-                <Text color={t.status === 'done' ? 'green' : undefined}>{icon} </Text>
-                <Text bold={t.status === 'active'} dimColor={dim}>{pad(t.name, nameWidth)}</Text>
-                {' '}{meter(t, frame, isWaiting)}  {label}
+      )
+    }
+
+    const took = formatElapsed((c.finishedAt ?? now) - c.startedAt)
+    let left: any
+    if (c.phase === 'working') {
+      left = <Text bold>{c.title} · {took}</Text>
+    } else if (c.phase === 'needs-you') {
+      left = (
+        <Text>
+          <Text inverse bold> Needs you </Text> {c.needsYouReason}
+        </Text>
+      )
+    } else if (c.phase === 'stuck') {
+      left = <Text color="red">⚠ Stuck: {c.stuckReason}</Text>
+    } else if (c.phase === 'stopped') {
+      left = <Text dimColor>■ Stopped · {c.title} · you pressed Esc</Text>
+    } else {
+      left = <Text color="green">✓ All done · {c.title} · took {took}</Text>
+    }
+
+    const header = (
+      <Box justifyContent="space-between" width={inner}>
+        <Box flexGrow={1}>{left}</Box>
+        {button}
+      </Box>
+    )
+
+    // Finished and folded: one line, still set apart by a blank line above.
+    if (c.phase === 'done' && c.isCollapsed) {
+      return (
+        <Box marginTop={1} width={cardWidth} paddingX={1}>
+          <Box width={inner}>
+            <Box flexGrow={1}>{left}</Box>
+            {button}
+          </Box>
+        </Box>
+      )
+    }
+
+    const isWaiting = c.phase === 'needs-you'
+    const nameWidth = Math.max(8, Math.min(MAX_NAME, inner - 2 - 1 - METER - 2 - LABEL))
+    const first = c.tasks.find(x => x.status === 'upcoming')
+
+    return (
+      <Box
+        marginTop={1}
+        flexDirection="column"
+        width={cardWidth}
+        paddingX={1}
+        borderStyle="round"
+        borderColor={PHASE_COLOR[c.phase] ?? 'gray'}
+      >
+        {header}
+        {c.tasks.length > 0 && <Text dimColor>{'─'.repeat(inner)}</Text>}
+        {c.tasks.map(t => {
+          const icon = t.status === 'done' ? '✓' : t.status === 'active' ? (isWaiting ? '‖' : '▶') : '○'
+          const label =
+            t.status === 'done'
+              ? 'Done'
+              : t.status === 'active'
+                ? t.hasReported ? `${t.percent}%` : 'Working'
+                : t === first ? 'Next' : 'Up next'
+          const isActive = t.status === 'active'
+          return (
+            <Text key={t.id} dimColor={!isActive}>
+              <Text color={t.status === 'done' ? 'green' : isActive ? PHASE_COLOR[c.phase] : undefined}>{icon} </Text>
+              <Text bold={isActive}>{pad(t.name, nameWidth)}</Text>
+              {' '}
+              <Text color={t.status === 'done' ? 'green' : isActive ? PHASE_COLOR[c.phase] : undefined}>
+                {meter(t, frame, isWaiting)}
               </Text>
-            )
-          })}
+              {'  '}{label.padEnd(LABEL)}
+            </Text>
+          )
+        })}
       </Box>
     )
   })
