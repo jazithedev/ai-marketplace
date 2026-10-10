@@ -7,6 +7,7 @@ type On = Parameters<Register>[0]
 
 const enabled = atom({ plugin: 'clean-view', key: 'cleanViewEnabled' } as const, true)
 const tick = atom({ plugin: 'clean-view', key: 'tick' } as const, 0)
+const isCommandDraft = atom({ plugin: 'clean-view', key: 'isCommandDraft' } as const, false)
 
 export const IDLE: Checklist = {
   title: '',
@@ -33,6 +34,7 @@ const PHASE_COLOR: Record<string, string> = {
   working: 'cyan',
   'needs-you': 'yellow',
   stuck: 'red',
+  paused: 'gray',
   stopped: 'gray',
   done: 'green',
 }
@@ -125,6 +127,10 @@ export const errorSentence = (text: string): string => {
   return 'something went wrong, try again'
 }
 
+export const asksQuestion = (answer: string): boolean => answer.trimEnd().slice(-200).includes('?')
+
+export const isCommandText = (text: string): boolean => text.trimStart().startsWith('/')
+
 export const formatElapsed = (ms: number): string => {
   const s = Math.max(0, Math.floor(ms / 1000))
   const m = Math.floor(s / 60)
@@ -132,14 +138,14 @@ export const formatElapsed = (ms: number): string => {
 }
 
 export const meter = (t: CleanTask, frame: number, isWaiting: boolean): string => {
-  if (t.status === 'done') return '█'.repeat(METER)
-  if (t.status === 'upcoming') return '░'.repeat(METER)
+  if (t.status === 'done') return '■'.repeat(METER)
+  if (t.status === 'upcoming') return '□'.repeat(METER)
   if (!t.hasReported && !isWaiting) {
     const pos = (frame % (METER + 3)) - 3
-    return Array.from({ length: METER }, (_, i) => (i >= pos && i < pos + 3 ? '█' : '░')).join('')
+    return Array.from({ length: METER }, (_, i) => (i >= pos && i < pos + 3 ? '■' : '□')).join('')
   }
   const filled = Math.round((t.percent / 100) * METER)
-  return '█'.repeat(filled) + '░'.repeat(METER - filled)
+  return '■'.repeat(filled) + '□'.repeat(METER - filled)
 }
 
 const pad = (s: string, width: number): string => {
@@ -378,13 +384,31 @@ export const registerCleanView = (on: On): void => {
     } else if (e.reason === 'aborted') {
       await finish($, 'stopped', {})
     } else if (c.tasks.some(t => t.status !== 'done')) {
-      await patch($, cur => ({
-        ...cur, phase: 'needs-you', needsYouReason: 'Claude is waiting for your reply',
-      }))
-      syncTimer($, 'idle')
+      if (asksQuestion(e.answer)) {
+        await patch($, cur => ({
+          ...cur, phase: 'needs-you', needsYouReason: 'Claude is waiting for your reply',
+        }))
+        syncTimer($, 'idle')
+      } else {
+        await finish($, 'paused', {})
+      }
     } else {
       await finish($, 'done', {})
     }
+    return next(e)
+  })
+
+  // While a slash command is being typed the engine's command menu opens just above
+  // the band; step out of its way until the draft is sent or cleared.
+  on('prompt.edit', async ($, e, next) => {
+    const r = await next(e)
+    const is = isCommandText(r.text)
+    if (is !== (await read($, isCommandDraft))) await update($, isCommandDraft, () => is)
+    return r
+  })
+
+  on('prompt.submit', async ($, e, next) => {
+    if (await read($, isCommandDraft)) await update($, isCommandDraft, () => false)
     return next(e)
   })
 
@@ -408,7 +432,10 @@ export const registerCleanView = (on: On): void => {
     const isOn = await read($, enabled)
     const c = await read($, checklist)
     const frame = await read($, tick)
+    const isCommand = await read($, isCommandDraft)
     const now = await $.clock.now()
+
+    if (isOn && isCommand) return <Box />
 
     const button = (
       <Button
@@ -443,6 +470,9 @@ export const registerCleanView = (on: On): void => {
       )
     } else if (c.phase === 'stuck') {
       left = <Text color="red">⚠ Stuck: {c.stuckReason}</Text>
+    } else if (c.phase === 'paused') {
+      const remaining = c.tasks.filter(t => t.status !== 'done').length
+      left = <Text dimColor>{`⏸ Paused · ${c.title} · ${remaining} step${remaining === 1 ? '' : 's'} left`}</Text>
     } else if (c.phase === 'stopped') {
       left = <Text dimColor>■ Stopped · {c.title} · you pressed Esc</Text>
     } else {
@@ -468,7 +498,7 @@ export const registerCleanView = (on: On): void => {
       )
     }
 
-    const isWaiting = c.phase === 'needs-you'
+    const isWaiting = c.phase === 'needs-you' || c.phase === 'paused'
     const nameWidth = Math.max(8, Math.min(MAX_NAME, inner - 2 - 1 - METER - 2 - LABEL))
     const first = c.tasks.find(x => x.status === 'upcoming')
 
