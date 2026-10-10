@@ -6,7 +6,7 @@ export type CleanTask = {
   hasReported: boolean
 }
 
-export type CleanPhase = 'idle' | 'working' | 'needs-you' | 'stuck' | 'stopped' | 'done'
+export type CleanPhase = 'idle' | 'working' | 'needs-you' | 'stuck' | 'paused' | 'stopped' | 'done'
 
 export type Checklist = {
   title: string
@@ -21,6 +21,6 @@ export type Checklist = {
 
 declare module 'claude-code' {
   interface PluginState {
-    'clean-view': { cleanViewEnabled: boolean; checklist: Checklist; tick: number }
+    'clean-view': { cleanViewEnabled: boolean; checklist: Checklist; tick: number; isCommandDraft: boolean }
   }
 }

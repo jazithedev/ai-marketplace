@@ -1,6 +1,6 @@
 import { expect, mock, test } from 'claude-code/testing'
 
-import { cleanName, fromTodos, normalize, planSteps, reportProgress, placeholders, errorSentence } from './clean-view'
+import { asksQuestion, isCommandText, cleanName, fromTodos, normalize, planSteps, reportProgress, placeholders, errorSentence } from './clean-view'
 
 const PLAN = 'mcp__clean-view__plan_steps'
 const REPORT = 'mcp__clean-view__report_progress'
@@ -131,4 +131,50 @@ test('7. a running job is drawn as a bordered card set apart from the chat', asy
     plugin: 'clean-view', surface: 'terminal', component: 'AbovePrompt', props: { ...AP, bodyColumns: 200 },
   } as any)
   expect(JSON.stringify(await wide.drawn())).toContain('"width":76')
+})
+
+const finishTurn = async ($: any, answer: string): Promise<string> => {
+  await $.turn.complete({ answer, durationMs: 1000, isAborted: false, turnId: 't1', reason: 'answer' })
+  return band($)
+}
+
+test('8. an unfinished plan with no question pauses instead of asking for you', async ($, on) => {
+  world(on)
+  on('turn.complete', (_$: any, e: any) => ({ text: e.answer }) as any)
+  await $.turn.start({ text: 'Make my page', turnId: 't1' })
+  await $.tool.call({ tool: PLAN, steps: ['Read notes', 'Build page'] } as any)
+  const drawn = await finishTurn($, 'I pushed the branch.')
+  expect(drawn).toContain('Paused')
+  expect(drawn).toContain('2 steps left')
+  expect(drawn).not.toContain('Needs you')
+})
+
+test('9. an unfinished plan whose answer asks something still needs you', async ($, on) => {
+  world(on)
+  on('turn.complete', (_$: any, e: any) => ({ text: e.answer }) as any)
+  await $.turn.start({ text: 'Make my page', turnId: 't1' })
+  await $.tool.call({ tool: PLAN, steps: ['Read notes', 'Build page'] } as any)
+  const drawn = await finishTurn($, 'Which colour do you prefer?')
+  expect(drawn).toContain('Needs you')
+  expect(drawn).toContain('Claude is waiting for your reply')
+})
+
+test('10. the card steps aside while a slash command is typed', async ($, on) => {
+  world(on)
+  on('prompt.edit', (_$: any, e: any) => ({ text: e.text.slice(0, e.start) + e.inputText + e.text.slice(e.end), cursor: e.start + e.inputText.length }) as any)
+  await $.turn.start({ text: 'Make my page', turnId: 't1' })
+  expect(await band($)).toContain('Working on it')
+  await $.prompt.edit({ origin: { kind: 'composer' }, text: '', cursor: 0, start: 0, end: 0, inputText: '/cre' } as any)
+  const hidden = await band($)
+  expect(hidden).not.toContain('Working on it')
+  expect(hidden).not.toContain('Clean View: ON')
+  await $.prompt.edit({ origin: { kind: 'composer' }, text: '/cre', cursor: 4, start: 0, end: 4, inputText: '' } as any)
+  expect(await band($)).toContain('Working on it')
+})
+
+test('helpers: question and command detection', () => {
+  expect(asksQuestion('Done. Want me to open the PR?')).toBe(true)
+  expect(asksQuestion('Done.')).toBe(false)
+  expect(isCommandText('  /plugin')).toBe(true)
+  expect(isCommandText('make a /thing')).toBe(false)
 })
