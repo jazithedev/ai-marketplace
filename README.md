@@ -35,6 +35,7 @@ Community-driven collection of Claude Code plugins — skills, agents, and tools
 | [create-gitlab-work-item](plugins/create-gitlab-work-item) | Productivity | Turn a short brief into a well-structured GitLab work item (Issue, Incident, Task, or Test case) via the glab CLI — Context, Expected Result, GIVEN/WHEN/THEN criteria, and optional QA Notes / Implementation Plan as collapsible details; previews before creating |
 | [pull-request](plugins/pull-request) | Productivity | Create draft pull requests from the commits on your branch — a single PR or a stacked chain under a collective branch; GitHub and GitLab support, full plan preview before anything is created. Also lists the GitHub PRs awaiting your review (`/pull-request:to-review-list`) and boards the open PRs you authored with their review status (`/pull-request:my-prs-list`) |
 | [clean-view](plugins/clean-view) | Productivity | A mod that hides tool calls, diffs and command output and shows one progress checklist above the prompt, for non-technical users; toggle with `/simple` |
+| [session-header](plugins/session-header) | Productivity | A mod that keeps the session's essentials in a bordered panel above the prompt — worktree, branch, model, permission mode, context use, cost and goal; set the goal with `/goal` |
 
 ## Contributing
 
