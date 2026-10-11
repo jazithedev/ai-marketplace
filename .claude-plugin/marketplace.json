@@ -7,7 +7,7 @@
   },
   "metadata": {
     "description": "Community-driven collection of Claude Code skills, agents, and plugins for software development workflows",
-    "version": "1.15.0"
+    "version": "1.15.1"
   },
   "plugins": [
     {
@@ -130,7 +130,7 @@
     {
       "name": "session-header",
       "description": "A bordered panel above the prompt with the session's essentials — worktree, branch and git state, model, permission mode, context use, cost, turns, age, rate limits and goal. A mod (hooks plugin); refresh the goal line with /header-goal.",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "author": {
         "name": "Krzysztof Trzos"
       },

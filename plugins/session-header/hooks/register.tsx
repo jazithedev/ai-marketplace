@@ -18,7 +18,10 @@ const SUMMARY_MODEL = 'claude-haiku-5-5'
 const REQUEST_SYSTEM =
   'Summarise what the user is asking for in one short phrase of at most 12 words. Describe the task itself. No quotes, no trailing period, no preamble.'
 const WORK_SYSTEM =
-  'You are given the opening request and the recent conversation of a coding session. State the main goal of the session in one short phrase of at most 12 words, reflecting the work actually done so far. No quotes, no trailing period, no preamble.'
+  "You are given the user's requests across a whole coding session, oldest first. State the overarching goal of the entire session in one short phrase of at most 12 words: the theme that ties the requests together, not just the latest one. If the work covers several related tasks, name the common thread. No quotes, no trailing period, no preamble."
+const MAX_REQUESTS = 36
+const REQUEST_CLIP = 200
+const NOT_A_REQUEST = /^(<local-command|<command-(name|message)|<system-reminder|<task-notification|\[SYSTEM NOTIFICATION|Base directory for this skill)/
 
 export type Item = {
   key: string
@@ -198,14 +201,26 @@ export const cleanSummary = (text: string): string | null => {
   return cleaned === '' ? null : clip(cleaned, MAX_GOAL)
 }
 
-export const workTranscript = (messages: readonly { role: string; text: string }[]): string => {
-  const opening = messages.find(message => message.role === 'user')
-  const recent = messages
-    .slice(-30)
-    .map(message => `${message.role}: ${clip(message.text.replace(/\s+/g, ' ').trim(), 600)}`)
-    .join('\n')
+// At most `count` items in order: the first and last few, with an even sample of what lies between.
+export const spread = <T,>(items: readonly T[], count: number): T[] => {
+  if (items.length <= count) return [...items]
+  const edge = Math.ceil(count / 6)
+  const middle = items.slice(edge, items.length - edge)
+  const sampled = Array.from({ length: count - 2 * edge }, (_, index) => middle[Math.floor((index * middle.length) / (count - 2 * edge))])
 
-  return clip(`Opening request: ${clip(opening?.text.replace(/\s+/g, ' ').trim() ?? '', 1500)}\n\nRecent conversation:\n${recent}`, 8000)
+  return [...items.slice(0, edge), ...sampled, ...items.slice(items.length - edge)]
+}
+
+// The user's own requests across the whole session, oldest first, so the summary names the session's
+// theme and not the latest turn. Command echoes, skill bodies and system notices are not requests.
+export const workTranscript = (messages: readonly { role: string; text: string }[]): string => {
+  const requests = messages
+    .filter(message => message.role === 'user')
+    .map(message => message.text.replace(/\s+/g, ' ').trim())
+    .filter(text => text !== '' && !NOT_A_REQUEST.test(text))
+  const lines = spread(requests, MAX_REQUESTS).map(text => `- ${clip(text, REQUEST_CLIP)}`)
+
+  return clip(`The user's requests across the whole session, oldest first (${requests.length} in all, a long session is sampled):\n${lines.join('\n')}`, 8000)
 }
 
 const readGit = async ($: EngineInterface): Promise<GitInfo | null> => {

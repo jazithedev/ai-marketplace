@@ -118,17 +118,42 @@ test('a model reply is cleaned to one short phrase', () => {
   expect(cleanSummary('x'.repeat(300))?.length).toBe(120)
 })
 
-test('the work transcript opens with the first user request and keeps the recent turns', () => {
-  const messages = [
-    { role: 'user', text: 'build a mod' },
-    ...Array.from({ length: 40 }, (_, index) => ({ role: 'assistant', text: `step ${index}` })),
-  ]
+test('the work transcript lists the requests of the whole session, oldest first', () => {
+  const messages = Array.from({ length: 100 }, (_, index) => [
+    { role: 'user', text: `request ${index}` },
+    { role: 'assistant', text: `answer ${index}` },
+  ]).flat()
   const transcript = workTranscript(messages)
 
-  expect(transcript).toContain('Opening request: build a mod')
-  expect(transcript).toContain('step 39')
-  expect(transcript).not.toContain('step 5\n')
+  expect(transcript).toContain('request 0')
+  expect(transcript).toContain('request 99')
+  expect(transcript).toContain('(100 in all')
+  expect(transcript).not.toContain('answer')
+  expect(transcript.indexOf('request 0')).toBeLessThan(transcript.indexOf('request 99'))
+  expect(transcript.match(/^- /gm)?.length).toBe(36)
   expect(transcript.length).toBeLessThanOrEqual(8000)
+})
+
+test('the middle of a long session is sampled, not dropped', () => {
+  const messages = Array.from({ length: 200 }, (_, index) => ({ role: 'user', text: `request ${index}` }))
+  const picked = [...workTranscript(messages).matchAll(/request (\d+)/g)].map(match => Number(match[1]))
+
+  expect(picked.some(n => n > 40 && n < 160)).toBe(true)
+  expect(picked).toEqual([...picked].sort((a, b) => a - b))
+})
+
+test('command echoes, skill bodies and system notices are not requests', () => {
+  const transcript = workTranscript([
+    { role: 'user', text: 'build a mod' },
+    { role: 'user', text: '<command-name>/plugin</command-name>' },
+    { role: 'user', text: 'Base directory for this skill: /x' },
+    { role: 'user', text: '[SYSTEM NOTIFICATION - NOT USER INPUT] hot reload' },
+    { role: 'user', text: '<local-command-caveat>x</local-command-caveat>' },
+  ])
+
+  expect(transcript).toContain('build a mod')
+  expect(transcript).toContain('(1 in all')
+  expect(transcript).not.toContain('command-name')
 })
 
 test('clip helpers respect the width', () => {
