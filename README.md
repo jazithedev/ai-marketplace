@@ -37,6 +37,7 @@ Community-driven collection of Claude Code plugins — skills, agents, and tools
 | [clean-view](plugins/clean-view) | Productivity | A mod that hides tool calls, diffs and command output and shows one progress checklist above the prompt, for non-technical users; always on while installed |
 | [session-header](plugins/session-header) | Productivity | A mod that keeps the session's essentials in a bordered panel above the prompt — worktree, branch, model, permission mode, context use, cost and goal; refresh the goal with `/header-goal` |
 | [filetree](https://github.com/data-goblin/claude-code-filetree) | Productivity | A mod that shows an IDE-style file tree in the right sidebar with git status and highlights on the files Claude reads, writes and commits; needs `/tui fullscreen` and a 110-column terminal ([source](https://github.com/data-goblin/claude-code-filetree)) |
+| [diagram-design](https://github.com/cathrynlavery/diagram-design) | Productivity | A skill that draws editorial diagrams — 44 types from architecture and flowcharts to Sankey and Gantt — as self-contained HTML + SVG ([source](https://github.com/cathrynlavery/diagram-design)) |
 
 ## Contributing
 
