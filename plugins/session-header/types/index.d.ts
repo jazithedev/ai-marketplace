@@ -11,8 +11,8 @@ declare module 'claude-code' {
   interface PluginState {
     'session-header': {
       git: GitInfo | null
-      firstPrompt: string | null
-      goalOverride: string | null
+      firstRequest: string | null
+      goal: string | null
       modes: string[]
       isCommandDraft: boolean
     }

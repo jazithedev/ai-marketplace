@@ -14,7 +14,7 @@ A mod (a hooks plugin, not a skill) that keeps the most important facts about a 
 
 - **Row 1, identity** — worktree (folder of the git checkout), branch (green when clean, yellow when there are uncommitted changes), changed files `✚n`, commits ahead `↑n` / behind `↓n` upstream, model, and permission mode coloured by mode (plan, accept-edits, auto, bypass, default)
 - **Row 2, metrics** — context bar (yellow from 60%, red from 80%), tokens against the window, session cost, turns, session age, and the 5-hour / 7-day rate-limit windows when the plan reports them
-- **Row 3, goal** — your first plain prompt, or whatever you set with `/goal <text>`; `/goal` alone clears the override
+- **Row 3, goal** — your first plain prompt, or a brief summary of what you asked at the very beginning, written once by a small model and kept for the session. It never follows later prompts and can't be edited by hand; run `/header-goal` to refresh it from the work done so far (the built-in `/goal` is a different command)
 
 ## Behaviour
 

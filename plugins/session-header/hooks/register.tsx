@@ -4,8 +4,8 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { GitInfo } from '../types'
 
 const git = atom({ plugin: 'session-header', key: 'git' } as const, null)
-const firstPrompt = atom({ plugin: 'session-header', key: 'firstPrompt' } as const, null)
-const goalOverride = atom({ plugin: 'session-header', key: 'goalOverride' } as const, null)
+const firstRequest = atom({ plugin: 'session-header', key: 'firstRequest' } as const, null)
+const goal = atom({ plugin: 'session-header', key: 'goal' } as const, null)
 const modes = atom({ plugin: 'session-header', key: 'modes' } as const, [])
 const isCommandDraft = atom({ plugin: 'session-header', key: 'isCommandDraft' } as const, false)
 
@@ -13,6 +13,12 @@ const MIN_BRANCH = 10
 const MIN_GOAL_COLUMNS = 30
 const FRAME_COLUMNS = 4
 const BAR_CELLS = 10
+const MAX_GOAL = 120
+const SUMMARY_MODEL = 'claude-haiku-5-5'
+const REQUEST_SYSTEM =
+  'Summarise what the user is asking for in one short phrase of at most 12 words. Describe the task itself. No quotes, no trailing period, no preamble.'
+const WORK_SYSTEM =
+  'You are given the opening request and the recent conversation of a coding session. State the main goal of the session in one short phrase of at most 12 words, reflecting the work actually done so far. No quotes, no trailing period, no preamble.'
 
 export type Item = {
   key: string
@@ -163,21 +169,43 @@ export const metricsRow = (info: HeaderInfo): Item[] => {
   return items
 }
 
-export const goalLine = (goal: string | null, columns: number): string | null => {
+export const goalLine = (summary: string | null, columns: number): string | null => {
   if (columns < MIN_GOAL_COLUMNS) return null
 
-  return clip(goal === null ? '◎ goal: none yet — set one with /goal <text>' : `◎ goal: ${goal}`, columns)
+  return clip(summary === null ? '◎ goal: waiting for your first request' : `◎ goal: ${summary}`, columns)
 }
 
 export const innerColumns = (bodyColumns: number): number => Math.max(0, bodyColumns - FRAME_COLUMNS)
 
 export const isCommandText = (text: string): boolean => text.trimStart().startsWith('/')
 
-export const summarisePrompt = (text: string): string | null => {
+export const extractRequest = (text: string): string | null => {
   const trimmed = text.trim()
-  if (trimmed === '' || trimmed.startsWith('/')) return null
+  const request = isCommandText(trimmed) ? trimmed.replace(/^\/\S+\s*/, '') : trimmed
+  const collapsed = request.replace(/\s+/g, ' ').trim()
 
-  return trimmed.replace(/\s+/g, ' ')
+  return collapsed === '' ? null : collapsed
+}
+
+export const cleanSummary = (text: string): string | null => {
+  const line = text.split('\n').map(part => part.trim()).find(part => part !== '') ?? ''
+  const cleaned = line
+    .replace(/^["'`“”‘’]+|["'`“”‘’]+$/g, '')
+    .replace(/^(goal|summary)\s*:\s*/i, '')
+    .replace(/[.。]+$/, '')
+    .trim()
+
+  return cleaned === '' ? null : clip(cleaned, MAX_GOAL)
+}
+
+export const workTranscript = (messages: readonly { role: string; text: string }[]): string => {
+  const opening = messages.find(message => message.role === 'user')
+  const recent = messages
+    .slice(-30)
+    .map(message => `${message.role}: ${clip(message.text.replace(/\s+/g, ' ').trim(), 600)}`)
+    .join('\n')
+
+  return clip(`Opening request: ${clip(opening?.text.replace(/\s+/g, ' ').trim() ?? '', 1500)}\n\nRecent conversation:\n${recent}`, 8000)
 }
 
 const readGit = async ($: EngineInterface): Promise<GitInfo | null> => {
@@ -198,6 +226,34 @@ const readGit = async ($: EngineInterface): Promise<GitInfo | null> => {
   }
 }
 
+const askForGoal = async ($: EngineInterface, system: string, prompt: string): Promise<string | null> => {
+  try {
+    const result = await $.model.complete({ model: SUMMARY_MODEL, system, prompt, maxTokens: 60, timeoutMs: 15_000 })
+
+    return result.isAnswered ? cleanSummary(result.text) : null
+  } catch {
+    return null
+  }
+}
+
+const summariseRequest = async ($: EngineInterface, request: string) => {
+  const provisional = clip(request, MAX_GOAL)
+  await update($, goal, () => provisional)
+  const summary = await askForGoal($, REQUEST_SYSTEM, clip(request, 4000))
+  if (summary !== null) {
+    await update($, goal, () => summary)
+  }
+}
+
+const summariseWork = async ($: EngineInterface): Promise<string | null> => {
+  const summary = await askForGoal($, WORK_SYSTEM, workTranscript(await $.session.messages()))
+  if (summary !== null) {
+    await update($, goal, () => summary)
+  }
+
+  return summary
+}
+
 const refresh = async ($: EngineInterface) => {
   try {
     const info = await readGit($)
@@ -209,11 +265,13 @@ const refresh = async ($: EngineInterface) => {
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
-    await $.command.register({
-      name: 'goal',
-      description: 'Set the goal line of the session header; no text clears it',
-    })
     await refresh($)
+    await $.command
+      .register({
+        name: 'header-goal',
+        description: 'Update the goal line of the session header from the work done so far',
+      })
+      .catch(() => undefined)
 
     return next(e)
   })
@@ -226,11 +284,12 @@ export const register: Register = on => {
     return next(e)
   })
 
-  on('command.run', { command: 'goal' }, async ($, e) => {
-    const text = e.args.trim()
-    await update($, goalOverride, () => (text === '' ? null : text))
+  on('command.run', { command: 'header-goal' }, async $ => {
+    const summary = await summariseWork($)
 
-    return { text: text === '' ? 'Goal cleared; the header shows the first prompt.' : `Goal set: ${text}` }
+    return {
+      text: summary === null ? 'Could not summarise the session; the goal line is unchanged.' : `Goal updated: ${summary}`,
+    }
   })
 
   on('prompt.edit', async ($, e, next) => {
@@ -247,9 +306,10 @@ export const register: Register = on => {
     if (await read($, isCommandDraft)) {
       await update($, isCommandDraft, () => false)
     }
-    const summary = summarisePrompt(e.text)
-    if (summary !== null) {
-      await update($, firstPrompt, current => current ?? summary)
+    const request = extractRequest(e.text)
+    if (request !== null && (await read($, firstRequest)) === null) {
+      await update($, firstRequest, () => request)
+      void summariseRequest($, request)
     }
     await refresh($)
 
@@ -291,7 +351,7 @@ export const register: Register = on => {
       ageMs: (await $.clock.now()) - usage.startedAt,
       limits: usage.rateLimits,
     }
-    const goal = goalLine((await read($, goalOverride)) ?? (await read($, firstPrompt)), width)
+    const goalText = goalLine(await read($, goal), width)
     const rows = [fitRow(identityRow(info), width), fitRow(metricsRow(info), width)]
 
     return (
@@ -313,9 +373,9 @@ export const register: Register = on => {
             ))}
           </Box>
         ))}
-        {goal !== null && (
+        {goalText !== null && (
           <Text italic color="white">
-            {goal}
+            {goalText}
           </Text>
         )}
         </Box>

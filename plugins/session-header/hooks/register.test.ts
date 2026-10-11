@@ -13,7 +13,9 @@ import {
   isCommandText,
   metricsRow,
   modeColors,
-  summarisePrompt,
+  extractRequest,
+  cleanSummary,
+  workTranscript,
 } from './register'
 import type { HeaderInfo } from './register'
 
@@ -96,15 +98,37 @@ test('helpers format values', () => {
   expect(innerColumns(80)).toBe(76)
 })
 
-test('the goal line hints at /goal when empty and hides when narrow', () => {
-  expect(goalLine(null, 80)).toContain('/goal')
+test('the goal line waits for the first request when empty and hides when narrow', () => {
+  expect(goalLine(null, 80)).toContain('first request')
   expect(goalLine('fix it', 20)).toBeNull()
   expect(goalLine('x'.repeat(100), 40)?.length).toBe(40)
 })
 
-test('slash commands never become the goal', () => {
-  expect(summarisePrompt('/grill-me on this')).toBeNull()
-  expect(summarisePrompt('  make   a\nmod ')).toBe('make a mod')
+test('a bare slash command is no request, a command with text keeps the text', () => {
+  expect(extractRequest('/model')).toBeNull()
+  expect(extractRequest('/grill-me:grill-me build a mod')).toBe('build a mod')
+  expect(extractRequest('  make   a\nmod ')).toBe('make a mod')
+  expect(extractRequest('   ')).toBeNull()
+})
+
+test('a model reply is cleaned to one short phrase', () => {
+  expect(cleanSummary('"Build a session header mod."\n\nExtra')).toBe('Build a session header mod')
+  expect(cleanSummary('Goal: fix the login bug.')).toBe('fix the login bug')
+  expect(cleanSummary('  \n ')).toBeNull()
+  expect(cleanSummary('x'.repeat(300))?.length).toBe(120)
+})
+
+test('the work transcript opens with the first user request and keeps the recent turns', () => {
+  const messages = [
+    { role: 'user', text: 'build a mod' },
+    ...Array.from({ length: 40 }, (_, index) => ({ role: 'assistant', text: `step ${index}` })),
+  ]
+  const transcript = workTranscript(messages)
+
+  expect(transcript).toContain('Opening request: build a mod')
+  expect(transcript).toContain('step 39')
+  expect(transcript).not.toContain('step 5\n')
+  expect(transcript.length).toBeLessThanOrEqual(8000)
 })
 
 test('clip helpers respect the width', () => {
