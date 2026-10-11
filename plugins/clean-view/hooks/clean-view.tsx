@@ -5,7 +5,6 @@ import type { Checklist, CleanPhase, CleanTask } from '../types'
 
 type On = Parameters<Register>[0]
 
-const enabled = atom({ plugin: 'clean-view', key: 'cleanViewEnabled' } as const, true)
 const tick = atom({ plugin: 'clean-view', key: 'tick' } as const, 0)
 const isCommandDraft = atom({ plugin: 'clean-view', key: 'isCommandDraft' } as const, false)
 
@@ -17,7 +16,6 @@ export const IDLE: Checklist = {
   stuckReason: null,
   startedAt: 0,
   finishedAt: null,
-  isCollapsed: false,
 }
 const checklist = atom({ plugin: 'clean-view', key: 'checklist' } as const, IDLE)
 
@@ -179,32 +177,14 @@ async function patch($: any, fn: (c: Checklist) => Checklist): Promise<Checklist
   return c
 }
 
-async function setEnabled($: any, value: boolean): Promise<void> {
-  await update($, enabled, () => value)
-  await $.store.set('cleanViewEnabled', value)
-  $.ui.toast(`Clean View is ${value ? 'on' : 'off'}`)
-}
-
 async function finish($: any, phase: CleanPhase, extra: Partial<Checklist>): Promise<void> {
   const now = await $.clock.now()
   await patch($, c => ({ ...c, phase, finishedAt: now, ...extra }))
-  if (phase === 'done') {
-    $.clock.after(5000, () => {
-      void update($, checklist, c => (c.phase === 'done' ? { ...c, isCollapsed: true } : c))
-    })
-  }
 }
 
 
 export const registerCleanView = (on: On): void => {
   on('session.start', async ($, e, next) => {
-    const saved = await $.store.get('cleanViewEnabled')
-    if (typeof saved === 'boolean') await update($, enabled, () => saved)
-    await $.command.register({
-      name: 'simple',
-      description: 'Turn Clean View on or off',
-      argumentHint: 'on|off',
-    })
     await $.tool.register({
       name: 'plan_steps',
       description:
@@ -237,18 +217,10 @@ export const registerCleanView = (on: On): void => {
     return next(e)
   })
 
-  on('command.run', { command: 'simple' }, async ($, e) => {
-    const arg = String((e as { args?: string }).args ?? '').trim().toLowerCase()
-    const value = arg === 'on' ? true : arg === 'off' ? false : !(await read($, enabled))
-    await setEnabled($, value)
-    return { text: `Clean View is ${value ? 'on' : 'off'}.` }
-  })
-
   on('prompt.compose', async ($, e, next) => {
     const out = await next(e)
-    if (!(await read($, enabled))) return out
     const text = [
-      'Clean View is on: the person sees only a checklist of your plan, not your tool calls.',
+      'Clean View is active: the person sees only a checklist of your plan, not your tool calls.',
       '- Write every step name in plain English a non-technical person understands, under 40 characters, starting with a verb, like "Build the pricing section".',
       '- Never put file paths, file names, commands, code or tool names in a step name.',
       `- For every request, even a quick question, call ${PLAN} first (load it with ToolSearch if it is deferred). Then call ${REPORT} as real progress happens, and with percent 100 the moment a step finishes.`,
@@ -258,7 +230,7 @@ export const registerCleanView = (on: On): void => {
   })
 
   on('turn.start', async ($, e, next) => {
-    if (e.text.trim().startsWith('/') || !(await read($, enabled))) return next(e)
+    if (e.text.trim().startsWith('/')) return next(e)
     const c = await read($, checklist)
     if (c.phase === 'working' || c.phase === 'needs-you') {
       await patch($, cur => ({ ...cur, phase: 'working', needsYouReason: null }))
@@ -291,7 +263,7 @@ export const registerCleanView = (on: On): void => {
   })
 
   on('tool.call', async ($, e, next) => {
-    if (e.agentId !== undefined || !(await read($, enabled))) return next(e)
+    if (e.agentId !== undefined) return next(e)
     const c = await read($, checklist)
     const isJob = c.phase === 'working' || c.phase === 'needs-you' || c.phase === 'stuck'
     if (isJob && !hasRealPlan(c.tasks) && !ALWAYS_ALLOWED.has(e.tool) && denials < 3) {
@@ -349,7 +321,7 @@ export const registerCleanView = (on: On): void => {
 
   on('classic.Notification', async ($, e, next) => {
     const c = await read($, checklist)
-    if ((c.phase === 'working' || c.phase === 'needs-you') && (await read($, enabled))) {
+    if (c.phase === 'working' || c.phase === 'needs-you') {
       await patch($, cur => ({ ...cur, phase: 'needs-you', needsYouReason: 'Claude needs your OK to continue' }))
     }
     return next(e)
@@ -381,7 +353,7 @@ export const registerCleanView = (on: On): void => {
   })
 
   on('turn.complete', async ($, e, next) => {
-    if (e.agentId !== undefined || !(await read($, enabled))) return next(e)
+    if (e.agentId !== undefined) return next(e)
     const c = await read($, checklist)
     if (c.phase === 'idle') return next(e)
     if (e.reason === 'error') {
@@ -422,20 +394,18 @@ export const registerCleanView = (on: On): void => {
   // Hide the technical rows.
   for (const component of ['ToolUse', 'ToolResult', 'ToolGroup'] as const) {
     on('ui.render', { component }, async ($, e, next) => {
-      if (!(await read($, enabled))) return next(e)
       const { Box } = $.ui.resolve(e)
       return <Box />
     })
   }
 
   on('ui.render', { component: 'ToolProgress' }, async ($, e, next) => {
-    if (!(await read($, enabled))) return next(e)
     return next({ ...e, props: { ...e.props, hint: '' } })
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     if (e.props.hasSurvey) return next(e)
-    const { Box, Text, Button } = $.ui.resolve(e)
+    const { Box, Text } = $.ui.resolve(e)
     // Keep the mods below this one in the band (e.g. session-header) instead of replacing them, and
     // draw the card above them.
     const below = await next(e).catch(() => null)
@@ -445,34 +415,15 @@ export const registerCleanView = (on: On): void => {
         {below}
       </Box>
     )
-    const isOn = await read($, enabled)
     const c = await read($, checklist)
     const frame = await read($, tick)
     const isCommand = await read($, isCommandDraft)
     const now = await $.clock.now()
 
-    if (isOn && isCommand) return below ?? <Box />
+    if (isCommand || c.phase === 'idle') return below ?? <Box />
 
-    const button = (
-      <Button
-        key="toggle"
-        label={isOn ? '● Clean View: ON' : '○ Clean View: OFF'}
-        onPress={() => setEnabled($, !isOn)}
-      />
-    )
-
-    const isShown = isOn && c.phase !== 'idle'
     const cardWidth = Math.min(e.props.bodyColumns, CARD_WIDTH)
     const inner = cardWidth - 4
-
-    // Nothing to show: the button alone, right-aligned under a blank line.
-    if (!isShown) {
-      return stack(
-        <Box width={cardWidth} justifyContent="flex-end">
-          {button}
-        </Box>
-      )
-    }
 
     const took = formatElapsed((c.finishedAt ?? now) - c.startedAt)
     let left: any
@@ -495,24 +446,7 @@ export const registerCleanView = (on: On): void => {
       left = <Text color="green">✓ All done · {c.title} · took {took}</Text>
     }
 
-    const header = (
-      <Box justifyContent="space-between" width={inner}>
-        <Box flexGrow={1}>{left}</Box>
-        {button}
-      </Box>
-    )
-
-    // Finished and folded: one line, still set apart by a blank line above.
-    if (c.phase === 'done' && c.isCollapsed) {
-      return stack(
-        <Box marginTop={1} width={cardWidth} paddingX={1}>
-          <Box width={inner}>
-            <Box flexGrow={1}>{left}</Box>
-            {button}
-          </Box>
-        </Box>
-      )
-    }
+    const header = <Box width={inner}>{left}</Box>
 
     const isWaiting = c.phase === 'needs-you' || c.phase === 'paused'
     const nameWidth = Math.max(8, Math.min(MAX_NAME, inner - 2 - 1 - METER - 2 - LABEL))
