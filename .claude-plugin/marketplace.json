@@ -154,6 +154,21 @@
       "keywords": ["mod", "ui", "file-tree", "git", "pane"],
       "license": "MIT",
       "homepage": "https://github.com/data-goblin/claude-code-filetree"
+    },
+    {
+      "name": "diagram-design",
+      "description": "Editorial diagram design skill with 44 diagram types — architecture, flowchart, sequence, ER, timeline, Gantt, Sankey and more — as self-contained HTML + SVG, with no shadows and no Mermaid look. By Cathryn Lavery.",
+      "author": {
+        "name": "Cathryn Lavery"
+      },
+      "source": {
+        "source": "github",
+        "repo": "cathrynlavery/diagram-design"
+      },
+      "category": "productivity",
+      "keywords": ["skill", "diagrams", "svg", "architecture", "flowchart"],
+      "license": "MIT",
+      "homepage": "https://github.com/cathrynlavery/diagram-design"
     }
   ]
 }
