@@ -87,12 +87,20 @@ test('3. a permission prompt shows Needs you', async ($, on) => {
   expect(drawn).toContain('Claude needs your OK to continue')
 })
 
-test('4. /simple off hides the band, leaving the button', async ($, on) => {
+test('4. there is no on/off button, and a finished card stays whole', async ($, on) => {
   world(on)
-  await $.command.run({ command: 'simple', args: 'off' } as any)
-  const drawn = await band($)
-  expect(drawn).toContain('Clean View: OFF')
-  expect(drawn).not.toContain('Understand')
+  on('turn.complete', (_$: any, e: any) => ({ text: e.answer }) as any)
+  const idle = await band($)
+  expect(idle).not.toContain('Button')
+  expect(idle).not.toContain('Clean View')
+  await $.turn.start({ text: 'Make my page', turnId: 't1' })
+  await $.tool.call({ tool: PLAN, steps: ['Read notes'] } as any)
+  await $.tool.call({ tool: REPORT, task: 'Read notes', percent: 100 } as any)
+  await $.turn.complete({ answer: 'All set.', durationMs: 1000, isAborted: false, turnId: 't1', reason: 'answer' } as any)
+  const done = await band($)
+  expect(done).toContain('All done')
+  expect(done).toContain('Read notes')
+  expect(done).not.toContain('Button')
 })
 
 for (const surface of ['terminal', 'desktop'] as const) {
@@ -111,10 +119,10 @@ for (const surface of ['terminal', 'desktop'] as const) {
     await $.tool.call({ tool: REPORT, task: 'Build the pricing section', percent: 60 } as any)
     const ui = await $.ui.mount({ plugin: 'clean-view', surface, component: 'AbovePrompt', props: AP } as any)
     const texts = JSON.stringify(await ui.drawn())
-    for (const s of ['✓', '▶', '60%', 'Next', 'Up next', 'Done', 'Clean View: ON']) {
+    for (const s of ['✓', '▶', '60%', 'Next', 'Up next', 'Done']) {
       expect(texts).toContain(s)
     }
-    expect(await ui.find({ key: 'toggle' })).toBeDefined()
+    expect(await ui.find({ type: 'Button' })).toBeUndefined()
   })
 }
 
@@ -167,7 +175,6 @@ test('10. the card steps aside while a slash command is typed', async ($, on) =>
   await $.prompt.edit({ origin: { kind: 'composer' }, text: '', cursor: 0, start: 0, end: 0, inputText: '/cre' } as any)
   const hidden = await band($)
   expect(hidden).not.toContain('Working on it')
-  expect(hidden).not.toContain('Clean View: ON')
   await $.prompt.edit({ origin: { kind: 'composer' }, text: '/cre', cursor: 4, start: 0, end: 4, inputText: '' } as any)
   expect(await band($)).toContain('Working on it')
 })

@@ -16,11 +16,10 @@ export type Checklist = {
   stuckReason: string | null
   startedAt: number
   finishedAt: number | null
-  isCollapsed: boolean
 }
 
 declare module 'claude-code' {
   interface PluginState {
-    'clean-view': { cleanViewEnabled: boolean; checklist: Checklist; tick: number; isCommandDraft: boolean }
+    'clean-view': { checklist: Checklist; tick: number; isCommandDraft: boolean }
   }
 }
