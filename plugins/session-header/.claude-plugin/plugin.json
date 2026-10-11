@@ -1,7 +1,7 @@
 {
   "name": "session-header",
-  "description": "A bordered panel above the prompt with the session's essentials — worktree, branch and git state, model, permission mode, context use, cost, turns, age, rate limits and goal. A mod (hooks plugin); set the goal line with /goal.",
-  "version": "0.1.0",
+  "description": "A bordered panel above the prompt with the session's essentials — worktree, branch and git state, model, permission mode, context use, cost, turns, age, rate limits and goal. A mod (hooks plugin); refresh the goal line with /header-goal.",
+  "version": "0.2.0",
   "author": {
     "name": "Krzysztof Trzos"
   },
