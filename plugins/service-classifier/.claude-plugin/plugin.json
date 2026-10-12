@@ -1,0 +1,13 @@
+{
+  "name": "service-classifier",
+  "description": "Tell Application Services (CQRS handlers), Application Preconditions and Domain Services apart — classify an existing class or decide where new logic belongs, with GLASS, FOE and book-grounded heuristics, in CQRS + hexagonal PHP codebases",
+  "version": "1.0.0",
+  "author": {
+    "name": "Krzysztof Trzos",
+    "email": "k.trzos@jazi.pl"
+  },
+  "license": "MIT",
+  "keywords": ["ddd", "cqrs", "hexagonal", "application-service", "domain-service", "php", "architecture"],
+  "repository": "https://github.com/jazithedev/ai-marketplace",
+  "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/service-classifier"
+}
