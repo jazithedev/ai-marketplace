@@ -141,6 +141,19 @@
       "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/session-header"
     },
     {
+      "name": "service-classifier",
+      "description": "Tell Application Services (CQRS handlers), Application Preconditions and Domain Services apart — classify an existing class or decide where new logic belongs, with GLASS, FOE and book-grounded heuristics, in CQRS + hexagonal PHP codebases",
+      "version": "1.0.0",
+      "author": {
+        "name": "Krzysztof Trzos"
+      },
+      "source": "./plugins/service-classifier",
+      "category": "quality",
+      "keywords": ["ddd", "cqrs", "hexagonal", "application-service", "domain-service", "php", "architecture"],
+      "license": "MIT",
+      "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/service-classifier"
+    },
+    {
       "name": "filetree",
       "description": "An IDE-style file tree for Claude Code in the right sidebar — git status, lines changed, and highlights on the files Claude reads, writes and commits. A mod (hooks plugin) from data-goblin; needs Claude Code 2.1.287+, /tui fullscreen and a terminal at least 110 columns wide.",
       "author": {
