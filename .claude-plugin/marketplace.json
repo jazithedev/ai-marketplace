@@ -185,14 +185,14 @@
     },
     {
       "name": "problem-space",
-      "description": "Skills for understanding a problem before building it — /problem-space:problem-analyst maps stakeholders, pain points, requirements, business rules, success criteria, assumptions and risks — without suggesting solutions. By Andrea Laforgia.",
+      "description": "Skills for understanding a problem before building it — /problem-space:problem-analyst maps stakeholders, pain points, requirements, business rules, success criteria, assumptions and risks; /problem-space:user-story-writer slices it into thin, INVEST-compliant user stories. Neither suggests solutions. By Andrea Laforgia.",
       "version": "1.0.0",
       "author": {
         "name": "Andrea Laforgia"
       },
       "source": "./plugins/problem-space",
       "category": "productivity",
-      "keywords": ["analysis", "requirements", "problem-space", "stakeholders", "planning"],
+      "keywords": ["analysis", "requirements", "problem-space", "user-stories", "elephant-carpaccio", "invest", "planning"],
       "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/problem-space"
     }
   ]
