@@ -184,16 +184,16 @@
       "homepage": "https://github.com/cathrynlavery/diagram-design"
     },
     {
-      "name": "problem-analyst",
-      "description": "Problem analysis skill that maps the problem space before any implementation — stakeholders, pain points, requirements, business rules, success criteria, assumptions and risks — without suggesting solutions. By Andrea Laforgia.",
+      "name": "problem-space",
+      "description": "Skills for understanding a problem before building it — /problem-space:problem-analyst maps stakeholders, pain points, requirements, business rules, success criteria, assumptions and risks — without suggesting solutions. By Andrea Laforgia.",
       "version": "1.0.0",
       "author": {
         "name": "Andrea Laforgia"
       },
-      "source": "./plugins/problem-analyst",
+      "source": "./plugins/problem-space",
       "category": "productivity",
       "keywords": ["analysis", "requirements", "problem-space", "stakeholders", "planning"],
-      "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/problem-analyst"
+      "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/problem-space"
     }
   ]
 }
