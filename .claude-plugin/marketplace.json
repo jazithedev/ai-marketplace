@@ -182,6 +182,18 @@
       "keywords": ["skill", "diagrams", "svg", "architecture", "flowchart"],
       "license": "MIT",
       "homepage": "https://github.com/cathrynlavery/diagram-design"
+    },
+    {
+      "name": "problem-analyst",
+      "description": "Problem analysis skill that maps the problem space before any implementation — stakeholders, pain points, requirements, business rules, success criteria, assumptions and risks — without suggesting solutions. By Andrea Laforgia.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Andrea Laforgia"
+      },
+      "source": "./plugins/problem-analyst",
+      "category": "productivity",
+      "keywords": ["analysis", "requirements", "problem-space", "stakeholders", "planning"],
+      "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/problem-analyst"
     }
   ]
 }

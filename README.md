@@ -39,6 +39,7 @@ Community-driven collection of Claude Code plugins — skills, agents, and tools
 | [service-classifier](plugins/service-classifier) | Quality | Tell Application Services (CQRS handlers), Application Preconditions and Domain Services apart — classify a class or decide where new logic belongs, using the GLASS and FOE mnemonics; advice only, no edits |
 | [filetree](https://github.com/data-goblin/claude-code-filetree) | Productivity | A mod that shows an IDE-style file tree in the right sidebar with git status and highlights on the files Claude reads, writes and commits; needs `/tui fullscreen` and a 110-column terminal ([source](https://github.com/data-goblin/claude-code-filetree)) |
 | [diagram-design](https://github.com/cathrynlavery/diagram-design) | Productivity | A skill that draws editorial diagrams — 44 types from architecture and flowcharts to Sankey and Gantt — as self-contained HTML + SVG ([source](https://github.com/cathrynlavery/diagram-design)) |
+| [problem-analyst](plugins/problem-analyst) | Productivity | Analyses a problem before any implementation — stakeholders, pain points, requirements, business rules, success criteria, assumptions and risks — and refuses to suggest solutions ([source](https://github.com/andrealaforgia/claude-code-agents)) |
 
 ## Contributing
 
