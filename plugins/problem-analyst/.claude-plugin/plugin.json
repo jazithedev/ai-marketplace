@@ -1,0 +1,11 @@
+{
+  "name": "problem-analyst",
+  "description": "Problem analysis skill that maps the problem space before any implementation — stakeholders, pain points, functional and non-functional requirements, business rules, success criteria, assumptions and risks — while refusing to suggest solutions, technologies or architecture",
+  "version": "1.0.0",
+  "author": {
+    "name": "Andrea Laforgia"
+  },
+  "keywords": ["analysis", "requirements", "problem-space", "stakeholders", "planning"],
+  "repository": "https://github.com/jazithedev/ai-marketplace",
+  "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/problem-analyst"
+}
