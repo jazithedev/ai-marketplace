@@ -1,6 +1,6 @@
 import { expect, mock, test } from 'claude-code/testing'
 
-import { asksQuestion, isCommandText, cleanName, fromTodos, normalize, planSteps, reportProgress, placeholders, errorSentence } from './clean-view'
+import { asksQuestion, isCommandText, cleanName, jobName, fromTodos, normalize, planSteps, reportProgress, placeholders, errorSentence } from './clean-view'
 
 const PLAN = 'mcp__clean-view__plan_steps'
 const REPORT = 'mcp__clean-view__report_progress'
@@ -29,6 +29,16 @@ test('1. cleans names: code, paths and long names', () => {
   const long = cleanName('Write a really long winded description of the work that goes on and on forever')
   expect(long.length <= 40).toBe(true)
   expect(long.endsWith('…')).toBe(true)
+})
+
+test('1b. a refusal or a question from the naming model never becomes the title', () => {
+  expect(jobName("I can't name this job. I don't have enough context.")).toBe(null)
+  expect(jobName('Sorry, could you clarify the request?')).toBe(null)
+  expect(jobName('What did we just do?')).toBe(null)
+  expect(jobName('There is not enough context to name this')).toBe(null)
+  expect(jobName('')).toBe(null)
+  expect(jobName('"Update the review findings page."')).toBe('Update the review findings page')
+  expect(jobName('\nReflect recent work in Confluence\nextra')).toBe('Reflect recent work in Confluence')
 })
 
 test('5. a report of 100 checks off step one and starts step two', () => {

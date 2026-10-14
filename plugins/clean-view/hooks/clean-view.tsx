@@ -57,6 +57,18 @@ export const cleanName = (raw: string): string => {
   return s
 }
 
+// The naming model sometimes answers a vague follow-up ("also update that page")
+// with a refusal or a question instead of a name; that must never become the title.
+const NOT_A_NAME = /^(i|i'm|im|sorry|unfortunately|as an)\b|\b(can't|cannot|unable|don't have|not enough|more context|no context|clarify)\b|\?/i
+
+export const jobName = (reply: string): string | null => {
+  const line = reply.split('\n').map(l => l.trim()).find(l => l !== '') ?? ''
+  const bare = line.replace(/^["'*\s]+|["'*.\s]+$/g, '')
+  if (bare === '' || NOT_A_NAME.test(bare) || bare.split(/\s+/).length > 8) return null
+  const name = cleanName(bare)
+  return name === 'Working on it' ? null : name
+}
+
 const task = (id: string, name: string): CleanTask => ({
   id, name, status: 'upcoming', percent: 0, hasReported: false,
 })
@@ -251,11 +263,17 @@ export const registerCleanView = (on: On): void => {
         model: 'haiku',
         effort: 'low',
         maxTokens: 30,
-        prompt: `Name this job in 2 to 6 plain words, starting with a verb. Reply with the name only.\n\nRequest: ${e.text.slice(0, 500)}`,
+        prompt: [
+          'Name this job in 2 to 6 plain words, starting with a verb. Reply with the name only.',
+          'The request may be a follow-up to earlier work you cannot see. Never refuse, apologise or ask a question: name it from its own words, like "Update the review findings page".',
+          '',
+          `Request: ${e.text.slice(0, 500)}`,
+        ].join('\n'),
       })
       .then(async (r: any) => {
         if (!r.isAnswered) return
-        const name = cleanName(String(r.text).split('\n')[0])
+        const name = jobName(String(r.text))
+        if (name === null) return
         await update($, checklist, cur => (cur.startedAt === now ? { ...cur, title: name } : cur))
       })
       .catch(() => undefined)
