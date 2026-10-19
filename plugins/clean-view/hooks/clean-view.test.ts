@@ -202,6 +202,58 @@ test('11. the card draws above another mod instead of replacing it', async ($, o
   expect(drawn.indexOf('Working on it')).toBeLessThan(drawn.indexOf('BELOW-MARK'))
 })
 
+const failTurn = async ($: any): Promise<void> => {
+  await $.turn.complete({ answer: '', durationMs: 1000, isAborted: false, turnId: 't1', reason: 'error' })
+}
+
+const step = async ($: any, index: number): Promise<void> => {
+  const s = $.turn.step({ turnId: 't1', index, model: 'opus', messageCount: 3 })
+  for await (const _ of s) { /* drain */ }
+}
+
+const stepWorld = (on: any): void => {
+  world(on)
+  on('turn.complete', (_$: any, e: any) => ({ text: e.answer }) as any)
+  on('turn.step', async function* (_$: any, e: any) {
+    return { turnId: e.turnId, index: e.index, answer: '', toolUses: [] }
+  })
+}
+
+test('12. work that resumes after an error (e.g. after /login) clears Stuck and keeps the plan', async ($, on) => {
+  stepWorld(on)
+  await $.turn.start({ text: 'Make my page', turnId: 't1' })
+  await $.tool.call({ tool: PLAN, steps: ['Read notes', 'Build page'] } as any)
+  await failTurn($)
+  expect(await band($)).toContain('Stuck')
+  await step($, 0)
+  const drawn = await band($)
+  expect(drawn).not.toContain('Stuck')
+  expect(drawn).toContain('"borderColor":"cyan"')
+  expect(drawn).toContain('Read notes')
+})
+
+test('13. a continuation turn after an error resumes the same job instead of starting a new one', async ($, on) => {
+  stepWorld(on)
+  await $.turn.start({ text: 'Make my page', turnId: 't1' })
+  await $.tool.call({ tool: PLAN, steps: ['Read notes', 'Build page'] } as any)
+  await failTurn($)
+  await $.turn.start({ text: '', turnId: 't2' })
+  const drawn = await band($)
+  expect(drawn).not.toContain('Stuck')
+  expect(drawn).toContain('Read notes')
+  const allowed = await $.tool.call({ tool: 'Bash', command: 'ls' } as any)
+  expect(JSON.stringify(allowed)).not.toContain('needs a plan first')
+})
+
+test('14. a step mid-turn leaves a running job alone', async ($, on) => {
+  stepWorld(on)
+  await $.turn.start({ text: 'Make my page', turnId: 't1' })
+  await $.tool.call({ tool: PLAN, steps: ['Read notes', 'Build page'] } as any)
+  await $.tool.call({ tool: REPORT, task: 'Read notes', percent: 40 } as any)
+  await step($, 1)
+  expect(await band($)).toContain('40%')
+})
+
 test('helpers: question and command detection', () => {
   expect(asksQuestion('Done. Want me to open the PR?')).toBe(true)
   expect(asksQuestion('Done.')).toBe(false)

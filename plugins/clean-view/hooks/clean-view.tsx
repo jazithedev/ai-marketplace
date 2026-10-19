@@ -194,6 +194,10 @@ async function finish($: any, phase: CleanPhase, extra: Partial<Checklist>): Pro
   await patch($, c => ({ ...c, phase, finishedAt: now, ...extra }))
 }
 
+async function resume($: any): Promise<void> {
+  await patch($, c => ({ ...c, phase: 'working', needsYouReason: null, stuckReason: null, finishedAt: null }))
+}
+
 
 export const registerCleanView = (on: On): void => {
   on('session.start', async ($, e, next) => {
@@ -246,6 +250,11 @@ export const registerCleanView = (on: On): void => {
     const c = await read($, checklist)
     if (c.phase === 'working' || c.phase === 'needs-you') {
       await patch($, cur => ({ ...cur, phase: 'working', needsYouReason: null }))
+      return next(e)
+    }
+    // A turn with no typed prompt (e.g. the retry after /login) carries on the same job.
+    if (e.text === '' && c.phase !== 'idle' && c.phase !== 'done') {
+      await resume($)
       return next(e)
     }
     const now = await $.clock.now()
@@ -368,6 +377,16 @@ export const registerCleanView = (on: On): void => {
     const c = await read($, checklist)
     if (c.phase === 'stuck') await patch($, cur => ({ ...cur, phase: 'working', stuckReason: null }))
     return next(e)
+  })
+
+  // A turn that died on an API error leaves the card Stuck; the next model request means
+  // the work is going again (the engine retries after /login without a new turn.start).
+  on('turn.step', async function* ($, e, next) {
+    if (e.agentId === undefined) {
+      const c = await read($, checklist)
+      if (c.phase === 'stuck' && c.finishedAt !== null) await resume($)
+    }
+    return yield* next(e)
   })
 
   on('turn.complete', async ($, e, next) => {
