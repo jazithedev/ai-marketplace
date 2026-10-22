@@ -49,6 +49,8 @@ For each finding, classify it:
 
 Also scan for things done WELL — report 1-3 positive observations if present. Examples: good use of value objects, clean naming, solid test coverage, correct use of design patterns, good PR description.
 
+Never praise a Command/Query Handler before checking it against pattern 17 (GLASS). Praising a handler that sequences ports, branches on domain state, or re-reads its input after transforming it ("guard comes first", "validates the result again") endorses the shape the reviewer rejects. Raise the GLASS finding instead.
+
 ## Output Format
 
 For each finding:

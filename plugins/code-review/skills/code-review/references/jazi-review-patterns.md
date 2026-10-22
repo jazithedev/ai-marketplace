@@ -166,11 +166,43 @@ When a design pattern is used (Decorator, Strategy, Factory, etc.), it must foll
 
 According to GRASP, controllers and console commands are orchestrators. Business logic belongs in CQRS Commands/Handlers, domain services, or entities — never in the adapter layer. This also allows the same logic to be triggered from multiple entry points (HTTP, CLI, Worker).
 
-### 17. CQRS commands must not return values
+### 17. Handlers are GLASS — they coordinate, they never decide
+
+A `*CommandHandler` / `*QueryHandler` is the Application Service, and it must be as thin as possible. Every line is one of **G**uard · **L**oad · **A**pply · **S**ave · **S**ignal, each step at most once, in that order. The process itself — reading, validating, transforming, branching on domain state, chaining ports — goes behind **one** Domain contract (a repository-like port, a Domain Service, an Aggregate method), and the mechanics live in Infrastructure.
+
+Flag it as a MUST when a handler:
+
+- calls the same port twice, or loads again after applying (a second `read()` after `convert()`);
+- branches on a domain predicate (`if ($document->needsConversion())`) — a condition a domain expert would state is a business rule;
+- chains three or more ports into a pipeline (read → validate → convert → store) — an operation script, not a facade;
+- has private helpers that drive the flow, or that translate one port's failure into another layer's exception;
+- would have to be copied by a second entry point (CLI, worker) to get the same behaviour.
+
+Not a violation: the Guard step (entitlement, ownership, existence), `if`s on application concerns (idempotency, which aggregate to load, an optional step the command asks for), and a trivial mapping to the returned value.
+
+A handler that fails this check is never a positive observation, even when its gate is the first statement.
+
+```php
+// BAD — the handler is the import process
+$file = $this->reader->read($command->path);
+$document = self::validate($file);
+if ($document->needsConversion()) {
+    $this->convert($command->path, $document);
+    $file = $this->reader->read($command->path);
+    $document = self::validate($file);
+}
+$url = $this->store->store(ownerId: $command->ownerId, path: $command->path, /* … */);
+
+// GOOD — guard, then one Domain contract; Infrastructure owns the steps
+$this->accessPrecondition->ensureOwned(folderId: $command->folderId, ownerId: $command->ownerId);
+$document = $this->documentStorage->save($command->path);
+```
+
+### 18. CQRS commands must not return values
 
 Command Handlers should return `void`. On error, throw an exception. This follows CQS (Command-Query Separation) principles as described by Bertrand Meyer, and applied in CQRS by Oskar Dudycz and Vaughn Vernon.
 
-### 18. Single method for aggregate mutations
+### 19. Single method for aggregate mutations
 
 Calling multiple setter-like methods on an aggregate is no different from exposing setters. Encapsulate the operation in a single domain method that enforces invariants.
 
@@ -184,23 +216,23 @@ $source->activate();
 $source->updateAndActivate($url, $profile);
 ```
 
-### 19. No array-of-arrays returns
+### 20. No array-of-arrays returns
 
 Don't return `array<array>` from repositories or services. Return typed objects, DTOs, or View classes instead. Untyped arrays are impossible to refactor safely and provide no IDE support.
 
-### 20. No Stamp Coupling
+### 21. No Stamp Coupling
 
 Don't pass entire objects or DTOs when only specific fields are needed. Pass the specific values. This reduces coupling and makes dependencies explicit.
 
-### 21. Event naming must describe what happened
+### 22. Event naming must describe what happened
 
 Domain events must clearly describe the thing that occurred — not use generic names. `ReviewMarkedAsPendingForRemoval` is good. `ReviewEvent` is meaningless.
 
-### 22. Validation belongs in domain, not controllers
+### 23. Validation belongs in domain, not controllers
 
 Business rules and invariant checks belong in entities and value objects. Controllers/adapters handle input parsing and HTTP concerns only.
 
-### 23. Focus on cause, not effect
+### 24. Focus on cause, not effect
 
 When fixing issues, address the root cause, not the symptom. If bad data reaches a template, the fix belongs where the data enters the system — not in the template.
 
@@ -208,31 +240,31 @@ When fixing issues, address the root cause, not the symptom. If bad data reaches
 
 ## MUST — Value Objects
 
-### 24. VO constructors must validate all invariants
+### 25. VO constructors must validate all invariants
 
 A Value Object instance must always be valid. All validation happens in the constructor (or factory method). If input is invalid, throw — never create a half-valid instance.
 
-### 25. Guard clauses over silent handling
+### 26. Guard clauses over silent handling
 
 Don't silently fix bad input (e.g., calling `.trim()` on what should already be trimmed). If input is invalid, throw. If the caller sends garbage, the caller should know.
 
-### 26. Explicit property names
+### 27. Explicit property names
 
 Property names must communicate what the value represents, including its context. `$dateInUtc` is better than `$date` when timezone matters. `$priceInCents` is better than `$price`.
 
-### 27. Private/non-public mutation methods
+### 28. Private/non-public mutation methods
 
 Internal mutation methods (if any) must be private. External code should only interact through the public factory/constructor and read-only accessors.
 
-### 28. Timezone/locale/currency as part of the VO
+### 29. Timezone/locale/currency as part of the VO
 
 Contextual qualifiers belong inside the value object, not as external parameters passed around separately. A `DateTime` VO should contain its timezone, not expect callers to track it.
 
-### 29. Unit tests expected for every VO
+### 30. Unit tests expected for every VO
 
 Value objects are perfect candidates for unit testing — they're pure, deterministic, and self-contained. Every VO should have comprehensive tests.
 
-### 30. Prefer local VOs per module; `Shared/` is for ubiquitous concepts only
+### 31. Prefer local VOs per module; `Shared/` is for ubiquitous concepts only
 
 In this modular monolith, the same Value Object appearing in multiple modules with near-identical shape (e.g., a `LocationId` in module A and a structurally identical `LocationId` in module B) is **not** a finding. Local copies are the **preferred** default — they keep modules independent, let each owner evolve invariants, factory naming, and validation rules without cross-module coordination, and avoid coupling everything to a central Shared kernel.
 
@@ -247,27 +279,27 @@ In this modular monolith, the same Value Object appearing in multiple modules wi
 
 ## MUST — Testing
 
-### 31. No deprecated base test classes
+### 32. No deprecated base test classes
 
 Do not use `BaseUnitSuite` or similar deprecated base classes. Use `\PHPUnit\Framework\TestCase` directly.
 
-### 32. No Prophecy library
+### 33. No Prophecy library
 
 The Prophecy mocking library is not used. Use fakers (in-memory implementations of interfaces) or PHPUnit's native mocking/stubbing.
 
-### 33. Use fakers over mocks
+### 34. Use fakers over mocks
 
 In-memory fake implementations (e.g., `FakeUserRepository`) are clearer, more maintainable, and test behavior rather than implementation. Mocks should be a last resort — use them only when you need to verify that a void method was called.
 
-### 34. Tests mandatory for new behavior
+### 35. Tests mandatory for new behavior
 
 If new behavior is added to production code, tests for that behavior are required. "It works on my machine" is not a substitute for a test.
 
-### 35. No `expectExceptionMessage()`
+### 36. No `expectExceptionMessage()`
 
 Don't assert on exception messages — they're implementation details and make tests fragile. Assert on exception type only, or create dedicated exception classes.
 
-### 36. Data providers with named keys
+### 37. Data providers with named keys
 
 Data provider yields should use descriptive string keys (not comments above the array) to make test output readable.
 
@@ -281,7 +313,7 @@ yield 'zero value' => [0, 'zero'];
 yield 'positive value' => [1, 'one'];
 ```
 
-### 37. No conditional logic in tests
+### 38. No conditional logic in tests
 
 Tests should not contain `if` statements or conditional branches. If a test needs different data or paths, use separate test methods or data providers.
 
@@ -291,27 +323,27 @@ Tests should not contain `if` statements or conditional branches. If a test need
 
 These reinforce the rules in `pr-discipline.md` with additional checks:
 
-### 38. PR must be split if too large
+### 39. PR must be split if too large
 
 This is the most frequent reason for requesting changes. When a PR is too large, provide specific numbered steps for how to split it — don't just say "split it."
 
-### 39. No mixing FE and BE in single PR
+### 40. No mixing FE and BE in single PR
 
 Frontend and backend changes belong in separate PRs. Mixed PRs mean BE developers approve FE code (and vice versa) without proper expertise.
 
-### 40. PR title must describe what was done
+### 41. PR title must describe what was done
 
 The Jira ticket title alone is insufficient. The PR title must describe the actual change — e.g., "Add weekly report PDF generation" not just "RM-1234."
 
-### 41. PR description must explain what and why
+### 42. PR description must explain what and why
 
 An empty or one-word description is unacceptable. The description should explain what changed, why, and any context a reviewer needs.
 
-### 42. AI-generated code must be verified by author
+### 43. AI-generated code must be verified by author
 
 If code was generated by AI, the author is responsible for verifying every line. Non-English comments or suspiciously boilerplate patterns are red flags that the code wasn't reviewed.
 
-### 43. No force-push while reviewers are reviewing
+### 44. No force-push while reviewers are reviewing
 
 Once reviewers are assigned and working, do not force-push. Reviewers use the commit history to see what changed since their last pass.
 
@@ -321,27 +353,27 @@ Once reviewers are assigned and working, do not force-push. Reviewers use the co
 
 These are non-blocking. The author decides whether to apply them. Always prefix with `[Optional]`.
 
-### 44. Readability extractions
+### 45. Readability extractions
 
 Extract complex expressions into named variables or long closures into named private methods for clarity.
 
-### 45. Naming preferences
+### 46. Naming preferences
 
 Prefer `arrange*` prefix for test setup helper methods. Prefer domain-specific names over generic ones (Helper, Utils, Manager).
 
-### 46. Temporal awareness for scripts
+### 47. Temporal awareness for scripts
 
 Temporary scripts and workarounds should document: when the issue started, when to consider removal, and a link to the tracking ticket.
 
-### 47. Idempotent commands
+### 48. Idempotent commands
 
 CQRS commands that can safely be retried without side effects are preferable. Consider making commands idempotent where it doesn't add complexity.
 
-### 48. `array_map()` over foreach
+### 49. `array_map()` over foreach
 
 When building a new array from an existing one, `array_map()` is more readable and avoids mutation. But it's a suggestion, not a rule.
 
-### 49. Enum over string constants
+### 50. Enum over string constants
 
 When a fixed set of values exists, consider using a PHP enum instead of string constants. Enums provide type safety and IDE support.
 
@@ -351,15 +383,15 @@ When a fixed set of values exists, consider using a PHP enum instead of string c
 
 These are genuine questions, not demands. The author may have a good reason. Always prefix with `[Question]`.
 
-### 50. Rationale challenges
+### 51. Rationale challenges
 
 Ask WHY for any `@phpstan-ignore-line` or suppression, for unusual architectural decisions, and for added complexity that seems avoidable.
 
-### 51. Cross-module dependency questions
+### 52. Cross-module dependency questions
 
 When code reaches across module boundaries (especially using another module's internal classes instead of CQRS or gateways), ask why.
 
-### 52. Performance concerns
+### 53. Performance concerns
 
 When code patterns could generate excessive queries (N+1 problems, CQRS queries in loops, multiple repository calls where one would suffice), raise the concern.
 
