@@ -29,6 +29,16 @@ The default for most items below is MUST, unless the reviewer determines the con
 - Guard clauses missing for invalid input — silent fix-ups (e.g., `.trim()`) instead of throwing on bad input
 - Missing unit tests for value objects — VOs are ideal candidates for thorough testing
 
+### Application Service (Handler) shape
+The Command/Query Handler is the Application Service. It coordinates and never decides. Every line is **G**uard · **L**oad · **A**pply · **S**ave · **S**ignal, each step at most once, in that order. A query handler stops after Load and returns its View. Flag as **MUST**:
+- The same port called twice, or a second Load after Apply (e.g. `read()` → `convert()` → `read()` again)
+- An `if` on a domain predicate or business state (`needsConversion()`, a status, a threshold, a limit). The domain makes that decision, not the handler.
+- Three or more ports chained into a pipeline. That is an operation script, not a facade. Put the process behind one Domain contract (a repository-like port, a Domain Service, an Aggregate method) and keep the mechanics in Infrastructure.
+- Private helpers that drive the flow, or that catch one port's failure and rethrow it as another layer's exception
+- A flow a second entry point (CLI, worker) could only reuse by copying handler code
+
+Not violations: the Guard step (entitlement, ownership, existence), `if`s on application concerns (idempotency, which aggregate to load, an optional step the command requests), and a trivial mapping to the return value. Never praise a handler that fails this check, even when its gate comes first.
+
 ### Invariant Protection
 - Business rules validated in application services, controllers, or adapters instead of the owning entity/VO
 - Entities that can be constructed in an invalid state

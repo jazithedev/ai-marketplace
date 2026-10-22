@@ -24,16 +24,18 @@ Read only the matched section. If the lookup returns nothing relevant, proceed w
 ## Scope
 
 - Before flagging violations, scan sibling files in the same domain layer to understand established patterns — only flag deviations from BOTH canonical DDD AND the project's own conventions.
-- Only review files that belong to domain-related layers (domain, entity, value object, aggregate, domain service, repository interface).
+- Only review files that belong to domain-related layers (domain, entity, value object, aggregate, domain service, repository interface), plus **Application-layer Command and Query Handlers**. A handler is where domain logic leaks out of the domain, so it is always in scope.
 - Skip controllers, CLI commands, workers, infrastructure implementations, and config files.
 
 ## Special Attention
+
+Check every **Command/Query Handler** against the GLASS shape — Guard · Load · Apply · Save · Signal, each step at most once, in that order (pattern 17 in `references/jazi-review-patterns.md`, and the "Application Service (Handler) shape" section of the checklist). A handler that calls the same port twice, branches on a domain predicate, chains three or more ports into a pipeline, or has private helpers that drive the flow is a **MUST**: the process belongs behind one Domain contract, with the mechanics in Infrastructure. Each step may look reasonable on its own, so judge the handler's body as a whole.
 
 Pay special attention to **boolean flag parameters** that switch method behavior — these are a high-priority smell. When a boolean creates two distinct execution paths, or when it propagates through multiple layers (method → sub-call → job data → event), flag it. The fix is dedicated named methods (e.g., `processForFree()` instead of `process(bool $isFree = false)`). See the "Boolean Flag Parameters" section in the checklist.
 
 ## Classification Rules
 
-- **MUST**: Clear DDD violations — anemic domain model, invariant leaks, aggregate boundary violations, boolean flag propagation, multiple setter-like methods on aggregate
+- **MUST**: Clear DDD violations — anemic domain model, invariant leaks, aggregate boundary violations, boolean flag propagation, multiple setter-like methods on aggregate, a handler that is not GLASS
 - **OPTIONAL**: Tactical preferences where multiple valid approaches exist, minor naming
 - **QUESTION**: Intentional but unusual pattern choice that may have good reasons
 
