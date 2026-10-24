@@ -169,6 +169,21 @@
       "homepage": "https://github.com/cathrynlavery/diagram-design"
     },
     {
+      "name": "impeccable",
+      "description": "Design fluency for frontend development — one skill with 24 commands (/impeccable polish, audit, critique and more) and curated anti-pattern detection that makes your AI harness better at design. By Paul Bakaus.",
+      "author": {
+        "name": "Paul Bakaus"
+      },
+      "source": {
+        "source": "github",
+        "repo": "pbakaus/impeccable"
+      },
+      "category": "design",
+      "keywords": ["design", "frontend", "ui", "ux", "skill", "anti-patterns"],
+      "license": "Apache-2.0",
+      "homepage": "https://impeccable.style"
+    },
+    {
       "name": "problem-space",
       "description": "Skills for understanding a problem before building it — /problem-space:problem-analyst maps stakeholders, pain points, requirements, business rules, success criteria, assumptions and risks; /problem-space:user-story-writer slices it into thin, INVEST-compliant user stories. Neither suggests solutions. By Andrea Laforgia.",
       "version": "1.0.0",
