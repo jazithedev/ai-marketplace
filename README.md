@@ -24,6 +24,8 @@ Community-driven collection of Claude Code plugins — skills, agents, and tools
 
 ## Available Plugins
 
+### Maintained here
+
 | Plugin | Category | Description |
 |---|---|---|
 | [smart-commit](plugins/smart-commit) | Productivity | Intelligent git commits with Conventional Commits, automatic change decomposition, and interactive approval |
@@ -37,9 +39,16 @@ Community-driven collection of Claude Code plugins — skills, agents, and tools
 | [clean-view](plugins/clean-view) | Productivity | A mod that hides tool calls, diffs and command output and shows one progress checklist above the prompt, for non-technical users; always on while installed |
 | [session-header](plugins/session-header) | Productivity | A mod that keeps the session's essentials in a bordered panel above the prompt — worktree, branch, model, permission mode, context use, cost and goal; refresh the goal with `/header-goal` |
 | [service-classifier](plugins/service-classifier) | Quality | Tell Application Services (CQRS handlers), Application Preconditions and Domain Services apart — classify a class or decide where new logic belongs, using the GLASS and FOE mnemonics; advice only, no edits |
+| [problem-space](plugins/problem-space) | Productivity | Understand a problem before building it — `/problem-space:problem-analyst` analyses stakeholders, pain points, requirements, business rules, success criteria, assumptions and risks; `/problem-space:user-story-writer` slices it into thin, INVEST-compliant user stories; neither suggests solutions ([source](https://github.com/andrealaforgia/claude-code-agents)) |
+
+### From external repositories
+
+Listed here, but hosted and maintained in their own repositories.
+
+| Plugin | Category | Description |
+|---|---|---|
 | [diagram-design](https://github.com/cathrynlavery/diagram-design) | Productivity | A skill that draws editorial diagrams — 44 types from architecture and flowcharts to Sankey and Gantt — as self-contained HTML + SVG ([source](https://github.com/cathrynlavery/diagram-design)) |
 | [impeccable](https://github.com/pbakaus/impeccable) | Design | A skill with 24 design commands — `/impeccable polish`, `audit`, `critique` and more — plus curated anti-pattern detection for better frontend design ([source](https://github.com/pbakaus/impeccable)) |
-| [problem-space](plugins/problem-space) | Productivity | Understand a problem before building it — `/problem-space:problem-analyst` analyses stakeholders, pain points, requirements, business rules, success criteria, assumptions and risks; `/problem-space:user-story-writer` slices it into thin, INVEST-compliant user stories; neither suggests solutions ([source](https://github.com/andrealaforgia/claude-code-agents)) |
 
 ## Contributing
 
