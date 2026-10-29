@@ -194,6 +194,19 @@
       "category": "productivity",
       "keywords": ["analysis", "requirements", "problem-space", "user-stories", "elephant-carpaccio", "invest", "planning"],
       "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/problem-space"
+    },
+    {
+      "name": "say-less",
+      "description": "An always-on tone of voice that keeps everything Claude writes short, plain and easy for non-native English speakers to read, without losing facts, decisions or risks. Applies itself to chat replies, investigations, tickets, PRs and docs; switch it with /say-less:say-less off|on.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Krzysztof Trzos"
+      },
+      "source": "./plugins/say-less",
+      "category": "productivity",
+      "keywords": ["writing", "tone-of-voice", "brevity", "readability", "plain-english"],
+      "license": "MIT",
+      "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/say-less"
     }
   ]
 }
