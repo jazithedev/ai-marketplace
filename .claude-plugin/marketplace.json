@@ -78,7 +78,7 @@
     {
       "name": "create-jira-ticket",
       "description": "Create and update well-structured Jira tickets — Context, Expected Result, numbered full-sentence acceptance criteria, and optional Action Points, QA Notes and Implementation Plan sections. Keeps implementation detail out of the acceptance criteria, retires Action Points as they are answered, and updates existing tickets safely. Site- and project-agnostic; remembers your filing preferences and previews before writing.",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "author": {
         "name": "Krzysztof Trzos"
       },
