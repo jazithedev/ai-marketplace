@@ -1,11 +1,11 @@
 {
   "name": "problem-space",
-  "description": "Skills for understanding a problem before building it — problem-analyst maps stakeholders, requirements, business rules, assumptions and risks; user-story-writer slices the problem into thin, INVEST-compliant user stories. Neither suggests solutions, technologies or architecture.",
-  "version": "1.0.0",
+  "description": "Skills for understanding a problem before building it — problem-analyst maps stakeholders, requirements, business rules, assumptions and risks; open-questions turns the analysis into a short, natural list of the questions only people can answer; user-story-writer slices the problem into thin, INVEST-compliant user stories. None suggests solutions, technologies or architecture.",
+  "version": "1.1.0",
   "author": {
     "name": "Andrea Laforgia"
   },
-  "keywords": ["analysis", "requirements", "problem-space", "user-stories", "elephant-carpaccio", "invest", "planning"],
+  "keywords": ["analysis", "requirements", "problem-space", "user-stories", "elephant-carpaccio", "invest", "planning", "open-questions"],
   "repository": "https://github.com/jazithedev/ai-marketplace",
   "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/problem-space"
 }
