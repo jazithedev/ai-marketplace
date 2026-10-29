@@ -6,15 +6,34 @@ exists; the detail is tucked inside the expander so the ticket stays scannable. 
 way — heading node, then an `expand` node immediately after it.
 
 Markdown has no expander, so when (and only when) one of these sections exists you must send the
-description as **ADF** (Atlassian Document Format) instead of markdown.
+description in a rich format: **ADF** (Atlassian Document Format) or **HTML**.
 
 ## Decision
 
 - **Neither QA Notes nor Implementation Plan** → send the body as **markdown**
   (`contentFormat: "markdown"`). Simpler, and everything else in the template renders fine in
   markdown.
-- **QA Notes and/or Implementation Plan present** → send the body as **ADF** (`contentFormat: "adf"`)
-  so each `expand` node renders as a real collapsible section beneath its heading.
+- **QA Notes and/or Implementation Plan present** → pick the rich format the tool accepts. Atlassian
+  MCP servers differ: some `createJiraIssue` / `editJiraIssue` tools take `markdown | adf`, others
+  `markdown | html`. Read the tool's `contentFormat` enum and use:
+  - `adf` when listed: the `expand` node below.
+  - otherwise `html`: `<details><summary>Implementation Plan</summary>…</details>` after an
+    `<h1>Implementation Plan</h1>`. Jira converts it into the same `expand` node. See
+    "HTML equivalent" below.
+
+## HTML equivalent
+
+Same structure as the ADF, written as an HTML fragment (no `<html>` or `<body>`):
+
+```html
+<h1>Context</h1><p>Why we are doing this.</p>
+<h1>Acceptance Criteria</h1>
+<ol start="1"><li><p>One full-sentence criterion.</p></li></ol>
+<h1>Implementation Plan</h1>
+<details><summary>Implementation Plan</summary>
+  <ul><li><p>Step with <code>inline code</code>.</p></li></ul>
+</details>
+```
 
 ## How to call the tool with ADF
 
@@ -155,14 +174,28 @@ conversation. If anyone touched the ticket in between — including the user, by
 writing a stale copy reverts their edit and reports success. Re-read, apply your change to *that*, then
 write.
 
-Note that the read path may return the description as **markdown even when you request ADF**, which
-flattens expanders in the response. That makes the API an unreliable way to confirm your expanders
-survived: it can look flattened when it is fine. Trust the structure you sent, keep sending complete
-documents, and eyeball the ticket in the browser if you need certainty.
+## Verifying an expander landed
 
-## If ADF is rejected
+The read path returns `description` as **markdown even when you ask for ADF or HTML**, and markdown
+cannot show an expander. A read-back therefore *always* looks flattened, even when the expander is
+fine. Never treat that as a failure, and never rewrite the ticket because of it.
 
-If the MCP tool rejects the ADF payload, fall back gracefully: create the ticket with a
+To check, fetch the issue with `expand: "renderedFields"` and read `renderedFields.description`. An
+expander renders as a bold paragraph holding its title, directly below the section heading:
+
+```html
+<h1><a name="ImplementationPlan"></a>Implementation Plan</h1>
+<p><b>Implementation Plan</b></p>
+<ul>…</ul>
+```
+
+If that bold title paragraph is missing, the expander was flattened. Rewrite the full description in
+a rich format, and if it still won't stick, use the markdown fallback below. Another sign: rewriting
+an identical document leaves the issue's `updated` time unchanged, because Jira skips no-op writes.
+
+## If no rich format is accepted
+
+If the MCP tool rejects both ADF and HTML, fall back gracefully: create the ticket with a
 **markdown** body that keeps the `# QA Notes` and `# Implementation Plan` headings with their
 content beneath them (just not collapsed), then tell the user the expanders could not be applied
 automatically and they can collapse each with `/expand` in the editor. Never block ticket creation

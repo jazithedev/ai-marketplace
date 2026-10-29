@@ -189,9 +189,16 @@ Use `createJiraIssue` with:
 
 Body format:
 - **Neither QA Notes nor Implementation Plan** → `contentFormat: "markdown"`, description as markdown.
-- **QA Notes and/or Implementation Plan present** → `contentFormat: "adf"` so their expanders render.
-  Both are "heading + collapsed expander". Follow `references/creating-with-an-expander.md` for the
-  ADF structure and the markdown fallback if ADF is rejected.
+- **QA Notes and/or Implementation Plan present** → a rich format so their expanders render: `adf`
+  where the tool accepts it, otherwise `html` with `<details><summary>`. Atlassian MCP servers
+  differ in which formats `createJiraIssue` and `editJiraIssue` accept, so check the tool's
+  `contentFormat` enum first. Both sections are "heading + collapsed expander". Follow
+  `references/creating-with-an-expander.md` for the ADF and HTML structure, how to verify the
+  expander landed, and the markdown fallback.
+
+**Verifying expanders.** The `description` field always comes back as markdown, and markdown has no
+expander, so a read-back *always* looks flattened. Don't judge from it, and don't rewrite a ticket
+because of it. Check `renderedFields` instead (details in the reference).
 
 ### 6. Report back and update memory
 
