@@ -49,11 +49,26 @@ Number the questions so people can reply "2: yes". With five or fewer, use one p
 
 Put first the questions that decide whether the work happens at all, or what it is. Then the ones that shape it. Details last.
 
+### Non-blocking questions
+
+Some questions must not hold up the estimate or the start of the work. A question is non-blocking only if both are true:
+
+- Every reasonable answer changes only a value, a wording or a setting, never the scope, the contract or the amount of work.
+- It has a safe default, usually today's behaviour, so the work can start and the answer can come later.
+
+When in doubt, it is blocking. If even one option adds work, the question is blocking. A question wrongly marked non-blocking gets skipped, and the surprise lands mid-work.
+
+Put non-blocking questions at the very end of the list, after any groups, still numbered straight through. Start each one with "Non-blocking:" and end it with its default, so silence is a valid answer:
+
+> 6. Non-blocking: should the confirmation email keep today's subject line, or mention the title? Unless someone says otherwise, I'll keep today's.
+
+Blocking questions get no label. Don't explain the classification anywhere in the output.
+
 ## 5. Write it like a person
 
 Read the finished list as if a colleague had written it. If anything looks generated, rewrite it.
 
-- No markers, labels, emoji, owner names, priority tags or "blocking" flags. A person signals what matters by the order and, if needed, one plain sentence.
+- No markers, labels, emoji, owner names, priority tags or "blocking" flags. A person signals what matters by the order and, if needed, one plain sentence. The only exception is the "Non-blocking:" label from step 4.
 - Each question can be answered as written. When the options are known, name them. When a current value matters, state it in a short clause.
 - Use the reader's words, not code identifiers, unless the readers are engineers.
 - Put one sentence right before the questions, two only if really needed, saying the way a person would that you have questions. Write a new one each time, fitted to the work, never a fixed phrase. For example: "I went through the current code for this, and a few things still aren't clear to me:", "Before we pick this up, I'd like to check a couple of things:" or, for a single question, "One thing I'm not sure about:".
@@ -68,6 +83,7 @@ Do not suggest answers unless the user asks for a suggestion. When they do, add 
 - Always write "I suggest". Never "Our suggestion", "We suggest" or "Recommendation:".
 - Keep it to the choice and one reason. The question already holds the context.
 - If the answer sets behaviour the acceptance criteria don't cover yet, say in the same remark that it belongs in them. Skip this when the criteria already cover it or the answer changes nothing they describe.
+- On a non-blocking question, the default is not a suggestion and is always stated. If your suggestion is the default, write only the default. If it differs, write the "I suggest" remark and make the suggestion the default: "I suggest mentioning the title, so patrons can tell emails apart. Unless someone says otherwise, I'll go with that."
 
 Show the list in the chat and stop. Posting it anywhere is a separate request.
 
