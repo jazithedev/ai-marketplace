@@ -33,6 +33,8 @@ code-review/
     ├── consolidation-rules.md            # Finding aggregation rules (G1, G3, G4, G7, G8)
     ├── comment-style.md                  # How a comment body is written (S7, S8)
     ├── multi-pr-grouping.md              # Several PRs: group by ticket, review each group at once
+    ├── delta-re-review.md                # Head moved since our last review: review the delta, verify fixes
+    ├── submitting-a-draft.md             # Reviewer asks to submit a pending draft: summary, threads, memory
     └── reviewer-memory-loading.md        # Auto-memory load + write-back (G5, S3)
 ```
 
@@ -118,6 +120,14 @@ git show refs/pr/<PR> --stat                              # commits on the branc
 
 A named ref is deliberate — `FETCH_HEAD` is overwritten by any concurrent fetch, and agents run in parallel.
 
+**The ref belongs to the orchestrator.** Agents read it and never write it: no `git update-ref`, no fetch into it, no teardown. The Step 5 prompt says so. The rule still gets broken: in one measured run the ref was gone by the time the agents reported, and a later `git show refs/pr/<PR>:…` failed with "invalid object name". So check it again before every step that reads it after the agent wave — Step 6 and the Step 8 line check — and fetch it again when it is missing:
+
+```bash
+git rev-parse --verify -q refs/pr/<PR> >/dev/null || git fetch origin refs/pull/<PR>/head:refs/pr/<PR>
+```
+
+**In zsh, brace the variable before a colon.** `git show $ref:path` does not do what it says: zsh reads `:r` as a modifier, removes everything after the last `.` of `$ref`, and the command fails or reads the wrong object. Write `git show "${ref}:path"`. The same applies to every `$var:…` in this file's recipes.
+
 **Tear it down after Step 9** so the reviewer's repo is left as it was found — the ref and the Step 3 workspace together:
 
 ```bash
@@ -185,6 +195,8 @@ In that case:
 2. If there are **author replies** on prior threads since the review was authored, fall through to **Re-review mode (S6)** to triage those replies.
 3. Otherwise, print `No changes since last review at <SHA> — skipping Phases 1 and 2.` and exit.
 
+**When the SHA differs, run a delta re-review, not a fresh one.** A prior skill review whose marker SHA is not the current head means the author pushed after that review — almost always to answer it. A fresh full review then re-raises what was already said, misses which fixes landed, and leaves the author's replies unanswered. Read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/delta-re-review.md` and follow it: it adds `{work_dir}/delta.diff`, a `{prior_review_brief}` for every agent, and a fix status for each prior finding. The rest of the flow below still runs. `--force` skips this too and runs a plain full review.
+
 To skip the short-circuit and force a fresh run, the reviewer passes `--force` as the second argument: `/code-review:code-review <PR> --force`.
 
 Parsing the marker:
@@ -196,7 +208,7 @@ prior_mtime=$(echo "$body" | head -1 | grep -oP 'memory \K[0-9]+')
 
 A marker line without `at <SHA>` was produced by v1.0.3 or earlier — treat as "no SHA captured" and run the full review normally.
 
-For each match, fetch its inline comments via `gh api repos/{owner}/{repo}/pulls/{pr}/comments --paginate` filtered to `pull_request_review_id == <review_id>`. Also fetch review-thread **resolved state** via GraphQL — REST doesn't expose `isResolved` on inline comments:
+For each match, fetch its inline comments via `gh api repos/{owner}/{repo}/pulls/{pr}/comments --paginate` filtered to `pull_request_review_id == <review_id>`. Also fetch each review thread's **resolved state, outdated state and node id** via GraphQL — REST exposes none of the three on inline comments:
 
 ```bash
 gh api graphql -F owner={owner} -F repo={repo} -F pr={pr} -f query='
@@ -205,7 +217,9 @@ gh api graphql -F owner={owner} -F repo={repo} -F pr={pr} -f query='
       pullRequest(number: $pr) {
         reviewThreads(first: 100) {
           nodes {
+            id
             isResolved
+            isOutdated
             comments(first: 50) { nodes { databaseId } }
           }
         }
@@ -214,7 +228,9 @@ gh api graphql -F owner={owner} -F repo={repo} -F pr={pr} -f query='
   }'
 ```
 
-Build a `comment_id -> resolved` map (every comment in a resolved thread inherits the state).
+Build a `comment_id -> {thread_id, resolved, outdated}` map (every comment in a thread inherits its state). `outdated` matters as much as `resolved`: GitHub folds an outdated thread away on both tabs, so a reply added there is easy to miss (Section D, *Outdated threads*). `thread_id` is what the resolve and reply mutations take.
+
+**GraphQL node ids carry a type prefix — do not mix them up.** `PRR_…` is a review, `PRRT_…` is a review thread, `PRRC_…` is a review comment. A thread mutation given a `PRR_` id fails with `NOT_FOUND` and writes nothing, which is safe but costs a retry.
 
 Additionally, parse each prior skill-authored review's body for `## General Findings` entries — see `agents/previous-comments.md` § Skill-self-detection for the parsing rules.
 
@@ -303,8 +319,15 @@ commits that never reached the default branch. If your finding depends on a repo
 in that block, measure it (`git merge-base --is-ancestor`, `git grep` at an explicit ref) and
 report the command and its output alongside the finding.
 
+`{source_ref}` is read-only for you. Never run `git update-ref`, never fetch into it, never delete
+it, and never delete `{work_dir}`. The orchestrator owns both and tears them down at the end.
+
+{prior_review_brief}
+
 Diff to review: {work_dir}/pr.diff
 ```
+
+`{prior_review_brief}` is empty unless Step 4c routed to a delta re-review — `references/delta-re-review.md` defines it.
 
 **Launch these agents simultaneously:**
 
@@ -352,7 +375,7 @@ The `{reviewer_rules}` block is the output of Step 4b. Always pass it to the age
 
 ### Step 6: Aggregate, classify, and filter
 
-Read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/consolidation-rules.md` and apply the run order it specifies. The high-level sequence:
+Read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/consolidation-rules.md` and apply the run order it specifies. Check first that `refs/pr/<PR>` still exists and fetch it again if not (Step 2) — the evidence replay below reads it. The high-level sequence:
 
 1. Collect all findings from all agents.
 1b. **Evidence replay.** Gather every finding's `evidence.command` (see `references/agent-output-contract.md` § 5) into **one** shell batch and run it. Compare each result against the claimed `output`:
@@ -381,6 +404,10 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/consolidation-rules.md
    - **General Finding already in a prior body** → drop the candidate entirely.
 
    Classification escalation (e.g., prior was `[Optional]`, candidate is `[Must]`) flips Case 1 (react) into Case 2 (reply with an escalation note).
+
+   Two more rules from Section D apply before any of those cases:
+   - **Outdated prior thread + blocking candidate** → a `[Must]` or `[Question]` never goes into an outdated thread, because GitHub folds those away. It becomes a fresh inline finding on the current line, with one line pointing at the earlier thread.
+   - **The author followed our own earlier suggestion** → a candidate that would undo or redo a change the author made because a prior skill comment asked for it is dropped, unless the result is factually wrong. A different preference is not enough. If it is kept, the comment says plainly that it corrects our earlier suggestion.
 10. Collect positive observations from Agent 8.
 11. **Collect Obstacles Encountered** from every agent's output. Deduplicate identical entries and keep them verbatim. Drop entries that say "None".
 12. Group by classification (MUST → OPTIONAL → QUESTION) and within each, sort by `certainty` descending.
@@ -546,9 +573,12 @@ Issues the review agents hit while doing their work — surfaced so the next ste
 - **anything else** (`REQUEST_CHANGES`, `COMMENT`) → **do not submit.** Create the review as a **pending draft** (Step 8, *Submitting a pending draft*) and hand it back for checking:
 
   ```
-  Drafted as PENDING — {n} inline comments, planned status {event}: {reason it is not APPROVE}.
+  Drafted as PENDING — {n} inline comments, {m} thread replies, planned status {event}: {reason it is not APPROVE}.
   Nobody can see it until you submit it: https://github.com/{owner}/{repo}/pull/{pr}/files
+  After you submit: {k} reactions to post, {j} threads to resolve — or ask me to submit it and I'll do both.
   ```
+
+  Omit the last line when both counts are 0.
 
   A pending review is private to its author, so the reviewer reads it on the PR, edits or deletes individual comments there, and submits it with whatever event they settle on.
 
@@ -571,9 +601,9 @@ Split every finding into one of three buckets:
 
 - **Inline finding** — references a specific file:line that **is in the PR diff** on the RIGHT side (added or context lines in a hunk). Posted as an inline review comment on that exact line as part of the batched review.
 - **General finding** — anything else: PR-level concerns (description placeholders, scope, naming), cross-file findings where the referenced file is not in the PR, or findings whose line is outside any diff hunk. Posted in the top-level review body under a "General Findings" section.
-- **Existing Threads** (from Step 6) — findings already covered by another reviewer's open inline comment. Posted as either a 👍 reaction on the original comment (pure agreement, nothing to add) or a threaded reply inside the original thread (something to add). Never goes in the top-level body and never as a new inline comment — that duplicates the conversation.
+- **Existing Threads** (from Step 6) — findings already covered by an open inline comment, another reviewer's or our own from an earlier run. Posted as either a 👍 reaction on the original comment (pure agreement, nothing to add) or a short threaded reply inside the original thread (missing context to add). Never goes in the top-level body and never as a new inline comment — that duplicates the conversation.
 
-The top-level review body contains **only** the metadata sections — never inline-eligible findings, and never a "Confirming existing review threads" section. Confirmations belong inside the threads they're confirming.
+The top-level review body contains **only** the metadata sections — never inline-eligible findings, and never a "Confirming existing review threads" section or anything like it, on any route. Confirmations belong inside the threads they're confirming. A thread that needs nothing gets nothing: "fixed" is said by resolving the thread, not by a comment.
 
 #### Top-level review body — exact template
 
@@ -633,7 +663,7 @@ General Findings are the same findings as the inline ones. They only failed the 
 - Project Rules Compliance
 - Obstacles Encountered
 - Summary
-- Confirmations of Existing Threads (those go inside the threads themselves; see the harness-denial fallback for the one exception)
+- Confirmations of Existing Threads (those go inside the threads themselves, with no exception)
 
 If the General Findings section has more than ~10 entries, wrap the Suggestions and Questions subsections in `<details><summary>…</summary>…</details>` so the comment stays readable.
 
@@ -692,6 +722,8 @@ GitHub's review API rejects the **entire review** if any inline comment points a
 
    **The field is `filename`, not `path`.** A bare `{path, patch}` yields `path: null` for every file, every finding then fails the "file not in the PR's files list" test below, and **every inline comment is silently demoted to General Findings** — a working review with the whole point of this step removed, and no error to notice.
 2. For each `patch`, parse `@@ -a,b +c,d @@` headers to derive the set of valid RIGHT-side line numbers — every line in the hunk that begins with `+` or ` ` (a space, i.e. a context line), counted from `c` onward.
+
+   **An empty `patch` does not mean an empty diff.** GitHub leaves `patch` out for a file whose diff is too large, and very long lines trigger it at a few hundred changed lines (measured: a 618-line change to one OpenAPI JSON file, `changes: 618`, `patch` missing). Parsed as-is, that file has no valid lines and every finding on it is demoted to General Findings with no error. When `patch` is null or empty but `changes > 0`, build the same set locally from the hunks of `git diff "$merge_base" "{source_ref}" -- <path>`, with `$merge_base` from Step 4e. Check that `{source_ref}` still exists first (Step 2). GitHub accepts a comment on such a line; only the API response omits the text.
 3. For each finding with `file:line`:
    - File not in the PR's files list → demote to **General Findings**.
    - File present but line not in the valid set → demote to **General Findings** (and prefix the entry with `\`{file}:{line}\` —` so the reader still sees the location).
@@ -789,12 +821,17 @@ gh api repos/{owner}/{repo}/pulls/{pr}/reviews \
 - The response's `state` is `PENDING`, and its `html_url` anchors a review nobody can open yet. Give the reviewer `https://github.com/{owner}/{repo}/pull/{pr}/files` instead, which is where the draft is editable and submittable.
 - **One pending review per user per PR.** A 422 naming an existing pending review means the reviewer has an unsubmitted draft of their own — possibly from an earlier run of this skill. Never delete it to make room. Report it with its URL and stop.
 - Report the computed event alongside the draft. It is the recommendation the reviewer acts on when they submit; it is not recorded on GitHub until they do.
+- Thread replies are added to the draft right after it is created (*Posting reactions and replies* below), so they publish together with it.
+- Keep the **draft record** for the rest of the session: review id and `PRR_…` node id, the body, each comment's id, badge and signature, the held reactions, `{threads_to_resolve}` and the computed event. `submitting-a-draft.md` lists the fields and compares against them.
+- If the reviewer later asks, in the same session, to submit or publish the draft — with or without their own changes — read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/submitting-a-draft.md` and follow it. It rebuilds the Summary table from what is left, submits, resolves the threads that are done, and collects memory signals from what the reviewer changed.
 
 #### Posting reactions and replies (Existing Threads bucket)
 
-These are separate API calls — not part of the batched review POST. Run them **before** the main review POST so a failure here can fall back to the body before the main submission goes out.
+These are separate API calls — not part of the batched review POST.
 
-**Order:**
+**Keep them short.** A reply is one to three sentences of missing context: a clarification the author asked for, a new location for the same rule, an escalation, a withdrawal. It is not a second copy of the finding. A thread whose point was fixed gets no reply at all — it gets resolved (*submitting-a-draft.md*, or Re-review mode). A reply that raises a new point uses the badge and the `<!-- sig: … -->` marker like any finding (`comment-style.md` § 2), so the next run recognises it; a plain withdrawal or clarification carries neither.
+
+**Order on a submitted review:**
 1. Reactions first (cheapest, idempotent on retry).
 2. Threaded replies second (one POST each).
 3. Main batched review POST last.
@@ -820,15 +857,26 @@ where `/tmp/reply-{comment_id}.json` is a JSON file you wrote with `Write` conta
 **Routing.** Reactions and replies go out on the same route the review itself took in Step 7:
 
 - **Auto-approved review** → post them, in the order above, before the review POST.
-- **Pending draft** → post **nothing** on the threads. A reaction or reply is published the instant it is sent, which would leak the review while the draft is still unread. Fold every confirmation into the pending review's body under a `## Confirming existing review threads` section, formatted exactly as the Step 7 preview rendered it, and tell the reviewer the confirmations are in the body because the review is unpublished. They go out as real reactions and replies only if the reviewer asks for them after submitting.
+- **Pending draft** → create the draft first, then attach every threaded reply **to the draft itself**, so it stays private and publishes when the reviewer submits:
+
+  ```bash
+  gh api graphql \
+    -f query='mutation($r: ID!, $t: ID!, $b: String!) {
+      addPullRequestReviewThreadReply(input: {pullRequestReviewId: $r, pullRequestReviewThreadId: $t, body: $b}) {
+        comment { id }
+      }
+    }' \
+    -f r=<review node id, PRR_…> -f t=<thread node id, PRRT_…> -f b="$body"
+  ```
+
+  The review node id is `node_id` in the draft POST's response; the thread id comes from the Step 4c map. The REST `/replies` endpoint above publishes at once and must not be used here.
+
+  **Reactions cannot be drafted** — GitHub publishes a reaction the moment it is sent. Hold them, list them in the hand-back message ("after you submit: 👍 on comments …"), and post them only when the reviewer submits through the skill (`submitting-a-draft.md`) or asks for them.
 - **Interactive gate** (reviewer asked to see it first) → the same `yes` / `no` / `edit` answer that approves the main review approves the planned reactions and replies. On `edit`, let the user strike specific entries (e.g., "drop the reply on comment X, react instead", "drop the react on comment Y entirely").
 
-**Harness denial fallback.** Some Claude Code harness configurations refuse writes related to "posting on a PR you didn't author" with the denial reason *External System Writes*. When that happens for a reaction or reply:
-- Don't silently drop the confirmation.
-- Move the affected entry into the top-level review body under a fallback section titled `## Confirming existing review threads`, formatted exactly as the local Step 7 preview was rendered.
-- Tell the user: "harness blocked posting on threads {comment_ids}; folded into the top-level body instead."
+**Harness denial.** Some Claude Code harness configurations refuse writes related to "posting on a PR you didn't author" with the denial reason *External System Writes*. When that happens for a reaction or reply, don't drop it silently and don't move it into the review body. Print each blocked entry in the terminal — comment id, `file:line`, the reaction or the reply text — and tell the reviewer: "harness blocked posting on threads {comment_ids}; here is what to post by hand."
 
-A harness denial and the pending-draft route above are the **only** legitimate reasons for a "Confirming existing review threads" heading to appear in the top-level body. On a submitted review it never appears.
+**A "Confirming existing review threads" heading never appears in a review body**, on a draft, a submitted review or after a denial.
 
 ---
 
@@ -836,13 +884,16 @@ A harness denial and the pending-draft route above are the **only** legitimate r
 
 After Step 8 posts successfully, compare the **local preview findings** (from Step 7) with the **posted findings**. Anywhere the reviewer made a judgment call worth remembering, offer to save a memory entry.
 
-The two sets only differ when the reviewer used the interactive gate. On the auto-approve route nothing was corrected, and on the draft route nothing is published yet — the reviewer's edits happen on GitHub, after this run ends. In both cases there are no candidates, so Step 9 produces nothing and says nothing; do not invent signals to fill it.
+The two sets differ in two situations. The first is the interactive gate, where the reviewer edits before posting. The second is the draft route, but only later: the reviewer deletes or changes comments on GitHub, changes the event, or tells you what to drop, and then asks you to submit. `submitting-a-draft.md` compares the draft as created with what is left and hands those differences to this step. On the auto-approve route nothing was corrected. A draft the reviewer submits on their own, outside this session, can't be compared. With no differences there are no candidates, so Step 9 produces nothing and says nothing; do not invent signals to fill it.
+
+A reviewer's instruction about **how the skill posts** ("never write a section like that", "react instead of replying") is also a signal. Save it as a feedback memory like the others, and say in the prompt that it belongs in the skill itself if it should hold in every repository.
 
 Read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/reviewer-memory-loading.md` for the write-back procedure. The signals worth surfacing:
 
 | Signal | Memory entry shape |
 |--------|--------------------|
-| Reviewer dropped a finding | "Don't flag X" rule |
+| Reviewer dropped a finding (including deleting a drafted comment on GitHub) | "Don't flag X" rule |
+| Reviewer submitted with a different event than the one computed | "Treat X as non-blocking" (or blocking) rule |
 | Reviewer marked a Question as `r` (resolve with own answer) | "Policy on X is Y" rule |
 | Reviewer downgraded MUST → Optional via `edit` | "X is mixed convention, not strict" rule |
 | Reviewer reworded a body substantially | Tone or terminology preference |
@@ -869,7 +920,7 @@ Memory write-back is **optional** — skipping it doesn't break anything; the re
 
 Triggered when the user runs `/code-review:code-review <PR> --since-last-review` or types something like "re-review thread N" or "re-review this PR's open threads".
 
-This mode skips Phases 1 and 2 entirely. It addresses author responses on the skill's prior review.
+This mode skips Phases 1 and 2 entirely. It addresses author responses on the skill's prior review. When the author has also pushed new commits, the delta re-review (Step 4c, `references/delta-re-review.md`) is the better fit: it does this triage and also reviews the new code.
 
 ### Algorithm
 
@@ -897,14 +948,14 @@ This mode skips Phases 1 and 2 entirely. It addresses author responses on the sk
    ```
 
 4. Apply the chosen action via `gh api`:
-   - **WITHDRAW** → resolve the thread:
+   - **WITHDRAW** → post a one-sentence reply saying why the concern no longer stands, then resolve the thread:
      ```bash
      gh api graphql -f query='mutation { resolveReviewThread(input: {threadId: "<gid>"}) { thread { isResolved } } }'
      ```
-     (You'll need to fetch the thread's GraphQL node id from `repos/{owner}/{repo}/pulls/{pr}` via GraphQL — REST API doesn't expose thread ids.)
+     (`<gid>` is the thread's `PRRT_…` node id from the Step 4c thread map — REST doesn't expose thread ids.)
    - **ESCALATE-TO-MUST** → post a reply that says explicitly "On reflection this is a blocking issue, not a question — please address before merge", then submit a fresh `REQUEST_CHANGES` review pointing at the same thread.
    - **KEEP** → do nothing; the thread stays open.
-   - **REPLY-WITH** → post the reply text as a threaded reply (see the existing "Threaded reply" section above for the API).
+   - **REPLY-WITH** → post the reply text as a threaded reply (see the existing "Threaded reply" section above for the API). If the thread is outdated and the reply asks for something blocking, open a fresh inline comment on the current line instead (Section D, *Outdated threads*).
 
 5. Always show the planned action to the reviewer before applying it. Single combined prompt: `Re-review found N threads with author replies. Apply the planned actions? (yes/no/edit)`
 
@@ -934,4 +985,6 @@ This mode skips Phases 1 and 2 entirely. It addresses author responses on the sk
 - **State review scope** when not reviewing everything: "Checked only Deptrac files."
 - **Surface obstacles, don't hide them.** If a subagent reported a setup issue or workaround, it goes in the "Obstacles Encountered" section so follow-up work doesn't pay the same cost twice.
 - **Inline comments belong on lines.** When posting to GitHub, every finding that points at a real file:line in the diff goes as an inline review comment on that line, not in the top-level body. The top-level body is reserved for the auto-generation notice, PR Discipline, Positive Observations, and genuinely PR-level findings (Step 8). Reviewers should see each finding next to the code it's about, not as a wall of file references.
-- **Confirmations belong in the thread they're confirming.** When another reviewer (Copilot, a teammate) has already raised the same point, react with 👍 on their comment if you have nothing to add, or post a threaded reply inside their thread if you do. Never re-flag it as a new inline finding, and never collect confirmations under a "Confirming existing review threads" heading in the top-level body. The single exception is the harness-denial fallback documented in Step 8 — that's a graceful degradation, not the default path.
+- **Confirmations belong in the thread they're confirming.** When another reviewer (Copilot, a teammate) or an earlier run of this skill has already raised the same point, react with 👍 on that comment if you have nothing to add, or post a short reply inside the thread if there is missing context. Never re-flag it as a new inline finding, and never collect confirmations under a "Confirming existing review threads" heading in the top-level body — there is no exception, not for drafts and not for harness denials (Step 8).
+- **Never hide a blocking point in an outdated thread.** GitHub folds outdated threads away. A `[Must]` or `[Question]` that follows up on one gets a fresh inline comment on the current line.
+- **Don't argue with your own earlier advice.** If the author changed the code because a prior skill comment asked them to, don't ask them to change it back over a preference. Raise it only when the result is wrong, and then say it corrects our earlier suggestion.
