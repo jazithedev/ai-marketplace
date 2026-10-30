@@ -23,7 +23,7 @@ Most weak lists fail here: they re-ask what the source already says. Re-read the
 
 **Already answered in the source?** Drop it. If the ticket says who the endpoint is for, or who owns a decision, that is not open, even if the analysis flagged it as an assumption.
 
-**Already listed as open in the source?** Drop it. Action points, open questions, TBDs and "to confirm" items are already being asked; repeating them is noise. This holds even when you would phrase them better. Don't mention that you left them out, either: the reader knows what the source already asks.
+**Already listed as open in the source?** Drop it. Action points, open questions, TBDs and "to confirm" items are already being asked; repeating them is noise. This holds even when you would phrase them better. Don't repeat them one by one; step 4 adds a single reminder that they are still open.
 
 **Outside this piece of work?** Drop it. The list serves the work item the source describes: what it delivers and what its acceptance criteria cover. For an API endpoint ticket, how the front end shows an error, undo, success metrics and budget belong to other people's tickets, even though they are real questions.
 
@@ -48,6 +48,12 @@ Merging must not lose anything. Every distinct thing that needs an answer is sti
 Number the questions so people can reply "2: yes". With five or fewer, use one plain numbered list — headings over two questions look like a form. With six or more, group them by topic under short plain headings (Scope, Limits, Rollout …) and number straight through across groups. If most headings would sit over a single question, drop the headings.
 
 Put first the questions that decide whether the work happens at all, or what it is. Then the ones that shape it. Details last.
+
+If the source has its own section of items still waiting for an answer (Action Points, Open Questions, TBD or similar), make item 1 a short reminder that names that section and how many items are still open, so people answer those too:
+
+> 1. The 3 points under Open Questions in the description are still open, so please answer those as well.
+
+Count only items that the source, its comments or the analysis haven't answered yet. If none are open, leave the reminder out.
 
 ### Non-blocking questions
 
