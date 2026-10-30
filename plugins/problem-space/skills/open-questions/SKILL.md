@@ -58,17 +58,19 @@ Some questions must not hold up the estimate or the start of the work. A questio
 
 When in doubt, it is blocking. If even one option adds work, the question is blocking. A question wrongly marked non-blocking gets skipped, and the surprise lands mid-work.
 
-Put non-blocking questions at the very end of the list, after any groups, still numbered straight through. Start each one with "Non-blocking:" and end it with its default, so silence is a valid answer:
+Put non-blocking questions at the very end, after any groups, under a separate paragraph that says only "Non-blocking:", followed by their own list. Keep numbering straight through from the blocking questions. End each question with its default, so silence is a valid answer:
 
-> 6. Non-blocking: should the confirmation email keep today's subject line, or mention the title? Unless someone says otherwise, I'll keep today's.
+> Non-blocking:
+>
+> 6. Should the confirmation email keep today's subject line, or mention the title? Unless someone says otherwise, I'll keep today's.
 
-Blocking questions get no label. Don't explain the classification anywhere in the output.
+Blocking questions get no label or heading. Don't explain the classification anywhere in the output.
 
 ## 5. Write it like a person
 
 Read the finished list as if a colleague had written it. If anything looks generated, rewrite it.
 
-- No markers, labels, emoji, owner names, priority tags or "blocking" flags. A person signals what matters by the order and, if needed, one plain sentence. The only exception is the "Non-blocking:" label from step 4.
+- No markers, labels, emoji, owner names, priority tags or "blocking" flags. A person signals what matters by the order and, if needed, one plain sentence. The only exception is the "Non-blocking:" paragraph from step 4.
 - Each question can be answered as written. When the options are known, name them. When a current value matters, state it in a short clause.
 - Use the reader's words, not code identifiers, unless the readers are engineers.
 - Put one sentence right before the questions, two only if really needed, saying the way a person would that you have questions. Write a new one each time, fitted to the work, never a fixed phrase. For example: "I went through the current code for this, and a few things still aren't clear to me:", "Before we pick this up, I'd like to check a couple of things:" or, for a single question, "One thing I'm not sure about:".
