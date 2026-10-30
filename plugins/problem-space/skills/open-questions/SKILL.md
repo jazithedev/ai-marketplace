@@ -15,7 +15,7 @@ Look for a `/problem-space:problem-analyst` analysis earlier in the conversation
 
 If there is none, run `/problem-space:problem-analyst` on whatever the user gave you (ticket, document, description), then continue here in the same turn. Do not write questions from the raw input — the useful questions come from the gaps the analysis finds, especially where the current behaviour differs from what the input assumes.
 
-Do not show that analysis in full. The user asked for questions, and a long analysis above the list buries it. Instead, open with 3 to 5 short lines of what the analysis found that the reader would not know from the input alone — mostly where the current behaviour differs from what the input assumes ("The ticket says owners only; today admins and billing contacts can export too"). Then the list. If the user wants the full analysis, they will ask.
+Do not show that analysis, and do not put a block of findings above the list. Both look generated and bury the questions. Instead, put each finding the reader would not know from the input into the question that needs it, as a short clause, mostly where today's behaviour differs from what the input assumes: "Today admins and billing contacts can export too. Should export stay owners-only, as the ticket says?" Leave out a finding that no question needs. If the user wants the full analysis, they will ask.
 
 ## 2. Keep only what is truly open
 
@@ -76,11 +76,11 @@ Blocking questions get no label or heading. Don't explain the classification any
 
 Read the finished list as if a colleague had written it. If anything looks generated, rewrite it.
 
-- No markers, labels, emoji, owner names, priority tags or "blocking" flags. A person signals what matters by the order and, if needed, one plain sentence. The only exception is the "Non-blocking:" paragraph from step 4.
+- No markers, labels, emoji, owner names, priority tags or "blocking" flags. A person signals what matters by the order. The only exception is the "Non-blocking:" paragraph from step 4.
 - Each question can be answered as written. When the options are known, name them. When a current value matters, state it in a short clause.
 - Use the reader's words, not code identifiers, unless the readers are engineers.
 - Put one sentence right before the questions, two only if really needed, saying the way a person would that you have questions. Write a new one each time, fitted to the work, never a fixed phrase. For example: "I went through the current code for this, and a few things still aren't clear to me:", "Before we pick this up, I'd like to check a couple of things:" or, for a single question, "One thing I'm not sure about:".
-- Apart from that sentence and the findings lines from step 1, at most one short sentence after the list, and only if a person would write it (for example, which questions matter most). No offers to post, share or expand.
+- Nothing after the list: no closing sentence, no note on which questions matter most, no offers to post, share or expand.
 
 ## 6. Suggestions, only when asked
 
