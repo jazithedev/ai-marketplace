@@ -76,6 +76,10 @@ In PR mode the review event is computed automatically: `REQUEST_CHANGES` if any 
 
 Say so up front ("review it and post it") to publish immediately regardless, or ask to see it first ("show me before posting") to get the old `yes` / `no` / `edit` preview gate back.
 
+Replies to existing threads are added to the draft too, so they stay private until you submit. Nothing is ever collected into a "confirming threads" section of the review body. Later in the same session you can ask the skill to submit the draft ("publish it as approved"). It then rebuilds the Summary table from the comments you kept, submits, posts the reactions a draft can't hold, resolves the threads that are done, and offers to remember what you removed.
+
+When the author pushes after a review, the next run is a **delta re-review**. It reviews the new commits, checks each earlier finding against the head (fixed, partly fixed, open, answered), and answers the author's replies in their threads. It doesn't ask the author to undo a change they made on our own advice. A blocking follow-up never goes into an outdated thread, because GitHub folds those away. It gets a fresh comment on the current line instead.
+
 ## Requirements
 
 - `gh` CLI authenticated against the target repo (PR mode)

@@ -18,7 +18,7 @@ The orchestrator runs these rules in order, on the in-memory findings list. Ther
 7. **Memory-premise verification** — see [Section C-bis](#section-c-bis--memory-premise-verification-g9) below.
 8. **Match existing PR threads** — pre-existing logic in `SKILL.md` Step 6 sub-step 8. Unchanged.
 8b. **Compute each finding's `signature`** — `{pattern}:{identifier}`, lowercased: the finding's `pattern`, a colon, and the main code identifier it is about (the symbol at `file:line`, else the first backtick-quoted identifier in `description`), copied verbatim. Use the pattern alone when the finding names no code identifier. It is posted as the hidden `<!-- sig: … -->` marker (`comment-style.md` § 2) and is the key sub-step 9 matches on.
-9. **Match prior skill-authored reviews** — see [Section D](#section-d--prior-skill-review-suppression-g8b) below.
+9. **Match prior skill-authored reviews** — see [Section D](#section-d--prior-skill-review-suppression-g8b) below. It first drops candidates that argue with our own earlier advice, and keeps blocking follow-ups out of outdated threads.
 10. **Collect positive observations + obstacles** — pre-existing logic. Unchanged.
 
 ---
@@ -235,7 +235,7 @@ _This code review was made automatically by Krzysztof Trzos Code Review AI Skill
 
 `prior_skill_findings`, produced by `agents/previous-comments.md` in Step 4c. It has two collections:
 
-- `prior_skill_findings.inline` — one entry per inline comment with `{comment_id, path, line, signature, signature_kind, classification, resolved}`
+- `prior_skill_findings.inline` — one entry per inline comment with `{comment_id, thread_id, path, line, signature, signature_kind, classification, resolved, outdated, suggested_fix, author_followed_suggestion}`
 - `prior_skill_findings.general` — one entry per General Finding parsed from the body with `{review_id, signature, signature_kind, classification}`
 
 `signature_kind` is `marker` for findings posted since v1.7.0, which carry a hidden `<!-- sig: … -->` marker, and `legacy` for older ones, whose signature is their normalised subject line.
@@ -249,6 +249,20 @@ Build two indexes keyed by normalised signature:
 - `inline_index: signature -> list of inline entries`
 - `general_index: signature -> list of general entries`
 
+### Our own earlier suggestion — checked first
+
+Before the cases below, compare the candidate with every prior inline entry whose `author_followed_suggestion` is true (Agent 4 sets it when the code at head matches that entry's `suggested_fix`). If the candidate would undo, redo or reshape the code the author wrote **because we asked for it**, drop it — unless the result is factually wrong: a broken contract, a false claim, a bug. A different preference is not enough. The author did what the review asked; asking for something else on the same lines tells them the first request was not worth following.
+
+When the candidate survives because the result is wrong, keep it, and say in its first sentence that it corrects our earlier suggestion. Its Section D action is then chosen as usual.
+
+The measured case: a review asked for a rule to be stated once on a shared schema. The author did it, and spelled out each endpoint's status because they differ. The next run's agents flagged that list as fragile. Nothing in it was false. The reviewer deleted that comment before submitting.
+
+### Outdated threads
+
+GitHub folds an **outdated** thread away: on *Files changed* it is not shown next to the code, and on *Conversation* it is collapsed under an "Outdated" label. A reply added to it is easy to miss for the reviewer checking a draft and for the author afterwards. Measured: a `[Question]` posted as a reply in an outdated thread was invisible to the reviewer on the draft, who had to ask where it was.
+
+So, before choosing a case, drop every prior entry with `outdated: true` from `matches` **when the candidate is a `[Must]` or a `[Question]`**. The candidate then usually lands in Case 3 or 5 and posts fresh on the current line. Start it with one short sentence that links the earlier thread, so the history stays connected. An `[Optional]` candidate keeps the outdated entries: a low-stakes follow-up can live in the old thread.
+
 ### Action selection (four cases)
 
 For each new candidate finding still in the working set after Step 6 sub-steps 1–8:
@@ -260,6 +274,8 @@ keys = [candidate.signature, normalise(candidate.description)]
 
 if candidate.bucket == "inline":
     matches = first non-empty of inline_index.get(k, []) for k in keys
+    if candidate.classification in {MUST, QUESTION}:
+        matches = [m for m in matches if not m.outdated]     # see "Outdated threads"
     unresolved = [m for m in matches if not m.resolved]
     same_file_unresolved = [m for m in unresolved if m.path == candidate.path]
 
@@ -319,6 +335,8 @@ No auto-generation notice on the reply (per SKILL.md — the notice lives only o
 | 3 | Inline, **resolved**, `FakeXTest.php:23`, sig `add aaa comments...` | Inline, `EntityXTest.php:23`, same sig | Fresh inline on `EntityXTest.php` |
 | 4 | General Finding in prior body, sig `pr description mismatch` | General Finding, same sig | Drop entirely |
 | 5 | No prior with this sig | Anything | Fresh, normal posting |
+| outdated | Inline, unresolved, **outdated**, `spec.json:2748`, sig `stale-description:…` | `[Question]` on `spec.json:2748`, same sig | Fresh inline on the current line, first sentence links the old thread |
+| own advice | Inline, `author_followed_suggestion: true`, sig `undocumented-error-contract:starrating` | `[Optional]` asking to remove what the author added | Drop — nothing in it is wrong |
 
 ---
 
