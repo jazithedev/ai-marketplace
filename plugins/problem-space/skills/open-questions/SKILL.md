@@ -56,7 +56,8 @@ Read the finished list as if a colleague had written it. If anything looks gener
 - No markers, labels, emoji, owner names, priority tags or "blocking" flags. A person signals what matters by the order and, if needed, one plain sentence.
 - Each question can be answered as written. When the options are known, name them. When a current value matters, state it in a short clause.
 - Use the reader's words, not code identifiers, unless the readers are engineers.
-- Apart from the findings lines from step 1, at most one short sentence before the list, and at most one after it, and only if a person would write it (for example, which questions matter most). No offers to post, share or expand.
+- Put one sentence right before the questions, two only if really needed, saying the way a person would that you have questions. Write a new one each time, fitted to the work, never a fixed phrase. For example: "I went through the current code for this, and a few things still aren't clear to me:", "Before we pick this up, I'd like to check a couple of things:" or, for a single question, "One thing I'm not sure about:".
+- Apart from that sentence and the findings lines from step 1, at most one short sentence after the list, and only if a person would write it (for example, which questions matter most). No offers to post, share or expand.
 
 ## 6. Suggestions, only when asked
 
