@@ -58,6 +58,16 @@ Read the finished list as if a colleague had written it. If anything looks gener
 - Use the reader's words, not code identifiers, unless the readers are engineers.
 - Apart from the findings lines from step 1, at most one short sentence before the list, and at most one after it, and only if a person would write it (for example, which questions matter most). No offers to post, share or expand.
 
+## 6. Suggestions, only when asked
+
+Do not suggest answers unless the user asks for a suggestion. When they do, add it to the question it answers, as a short remark after the question, not as a separate block or paragraph:
+
+> 5. If the patron doesn't borrow in time, does the offer go to the next person automatically? I suggest yes, so copies don't sit idle. I'd also add this to the acceptance criteria; they don't cover it yet.
+
+- Always write "I suggest". Never "Our suggestion", "We suggest" or "Recommendation:".
+- Keep it to the choice and one reason. The question already holds the context.
+- If the answer sets behaviour the acceptance criteria don't cover yet, say in the same remark that it belongs in them. Skip this when the criteria already cover it or the answer changes nothing they describe.
+
 Show the list in the chat and stop. Posting it anywhere is a separate request.
 
 See `references/example.md` for a full before-and-after.
