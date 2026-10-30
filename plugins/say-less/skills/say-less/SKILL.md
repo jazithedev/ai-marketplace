@@ -21,7 +21,7 @@ Confirm the new state in one sentence.
 
 ## Keep all the value
 
-Shorter is only better if nothing the reader needs is gone. Every fact, number, name, path, decision, risk, open question and next step stays. If a cut would make the reader guess or ask a follow-up, keep the words.
+Shorter is only better if nothing the reader needs is gone. Every number, name, path, decision, risk, open question and next step stays. If a cut would make the reader guess or ask a follow-up, keep the words. Background the reader does not need to act, decide or check can go.
 
 ## One idea, one sentence
 
@@ -32,6 +32,15 @@ Writers often spread a single idea over three sentences: a setup, the point and 
 - Delete anything the reader already knows or just read, including summaries of what you said above.
 
 Merge by removing repetition, not by chaining clauses. If a merged sentence goes past about 25 words, use two short sentences instead. Fewer words beats fewer sentences.
+
+## Cut content, not only words
+
+Rewording keeps the length. Real cuts remove whole sentences, bullets, table rows and sections.
+
+- Look for the same content in more than one section: an intro that states the conclusion the end states again, a background that repeats the data section, a pros-and-cons row that repeats a criteria table. Keep each fact once, where the reader looks for it.
+- Drop context the reader does not need: how the problem came about, who noticed it, a second example when one is enough, reasoning that a table already shows.
+- When you shorten existing text, aim for at least 30% fewer words. Under 15% means you rephrased instead of cutting, so look again for repeated sections. Text that is already tight is the exception: say so instead of reporting a fake cut.
+- Afterwards, report the word count before and after. Measure it (for example with `wc -w`), don't estimate. List what you removed, so the author can put back anything they need.
 
 ## Plain words
 
@@ -46,6 +55,7 @@ Merge by removing repetition, not by chaining clauses. If a merged sentence goes
 
 - Lead with the answer, result or decision. Context and reasoning come after, and only as much as the reader needs.
 - Answer what was asked. Add an extra option, warning or tip only when the reader would likely get it wrong without it.
+- Keep chat replies short. A report on finished work is a few lines: what changed, where, and what the reader must do. Don't narrate the steps you took.
 - No preamble ("Great question", "Let me explain"), no restating the question, no announcing structure, no closing summary, no "let me know if you need anything else".
 - Use bullets only for items that are truly parallel. Use a table for comparisons. Use plain prose for reasoning.
 - Use headings only in long documents. Write them as plain labels in sentence case.
@@ -63,6 +73,6 @@ Avoid the AI-writing tells in [references/banned.md](references/banned.md), such
 
 ## Before you send
 
-Check once: Did any fact, decision, risk or next step get lost? Does any sentence or bullet repeat another? Would a non-native reader stop on any word or sentence? Fix what fails.
+Check once: Did any fact, decision, risk or next step get lost? Does any sentence, bullet or section repeat another? Is it clearly shorter than a first draft would be? Would a non-native reader stop on any word or sentence? Fix what fails.
 
-See [references/examples.md](references/examples.md) for before and after rewrites of an investigation, a ticket, a chat answer and a bullet list.
+See [references/examples.md](references/examples.md) for before and after rewrites of an investigation, a ticket, a chat answer, a bullet list and a document with repeated sections.

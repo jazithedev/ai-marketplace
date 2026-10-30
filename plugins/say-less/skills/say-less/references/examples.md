@@ -49,6 +49,26 @@ After:
 
 > - Profile updates don't clear the cache, so users see old data, such as their old name, for up to 1 hour (the cache TTL).
 
+## Document with repeated sections
+
+Before (a decision record, 3 sections):
+
+> **Intro:** This record proposes a rule for the Orders API: every status value is lowercase snake_case. Words are separated by underscores, never by dashes. The payments team decided this for refunds; this record extends it to the whole API.
+>
+> **Background:** The refund endpoints were built by several people in parallel. The QA team found the same status spelled 3 ways (`on-hold`, `on_hold`, `onHold`), so every client keeps a mapping per endpoint.
+>
+> **Options, pros and cons:** snake_case: + same convention as field names, + valid identifier in every language, + matches existing code, - 4 endpoints rename. kebab-case: + reads like a URL, - not a valid identifier, - can't be a JSON key beside snake_case fields, - 6 endpoints rename.
+
+After:
+
+> **Intro:** This record extends the refunds decision to the whole Orders API.
+>
+> **Background:** One status has 3 spellings across refund endpoints (`on-hold`, `on_hold`, `onHold`), so every client keeps a mapping per endpoint.
+>
+> **Options, other pros and cons:** snake_case: + matches existing code, - 4 endpoints rename. kebab-case: + reads like a URL, - 6 endpoints rename.
+
+The rule itself lives in the Outcome section, so the intro doesn't repeat it. The criteria table already covers "valid identifier" and "JSON key", so the pros and cons drop them. Who built it and who found it doesn't change the decision. Report: 114 → 49 words, and list those 3 removals.
+
 ## When not to cut
 
 Before:
