@@ -1,7 +1,7 @@
 {
   "name": "say-less",
   "description": "An always-on tone of voice that keeps everything Claude writes short, plain and easy for non-native English speakers to read, without losing facts, decisions or risks. Applies to chat replies, investigations, tickets, PRs and docs; switch it with /say-less:say-less off|on.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": {
     "name": "Krzysztof Trzos"
   },
