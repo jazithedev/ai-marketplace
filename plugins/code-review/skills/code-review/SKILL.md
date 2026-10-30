@@ -604,7 +604,7 @@ _This code review was made automatically by Krzysztof Trzos Code Review AI Skill
  Omit the General Findings heading if there are none.}
 
 ### Required Changes
-- [{certainty}%] **[Must]** {problem — 1–3 sentences, the first states the finding} <!-- sig: {signature} -->
+- **[Must]** {problem — 1–3 sentences, the first states the finding} <!-- sig: {signature} -->
   **Suggested fix:** {concrete alternative}
   **Locations:** {from `consolidated_locations`, only when G1 merged this finding}
 
@@ -616,11 +616,11 @@ _This code review was made automatically by Krzysztof Trzos Code Review AI Skill
   </details>
 
 ### Suggestions
-- [{certainty}%] **[Optional]** {problem — 1–3 sentences, the first states the finding} <!-- sig: {signature} -->
+- **[Optional]** {problem — 1–3 sentences, the first states the finding} <!-- sig: {signature} -->
   **Suggested fix:** {concrete alternative, when there is one}
 
 ### Questions
-- [{certainty}%] **[Question]** {the question, then what is unclear — 1–3 sentences} <!-- sig: {signature} -->
+- **[Question]** {the question, then what is unclear — 1–3 sentences} <!-- sig: {signature} -->
 ```
 
 General Findings are the same findings as the inline ones. They only failed the diff-line check, so they use the same four parts and the same writing rules — including no subject line. Separate consecutive items with a blank line; the bold badge marks where each one starts. The `Why` fold is shown above only under Required Changes because that is where it usually lands, but a Suggestion or a Question carries one on the rare occasion it has evidence to fold. Read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/comment-style.md` before writing them, and drop any section that has nothing to put in it.
@@ -667,11 +667,10 @@ Each inline finding posts to its file:line with a body like:
 
 </details>
 
-_Certainty: {N}% · Pattern: {name} · Agents: {which agreed}_
 <!-- sig: {signature} -->
 ````
 
-There is no subject line: the badge is followed directly by the problem, with no em dash between them. The `<!-- sig: … -->` marker is the last line. GitHub does not render it; the next run reads it to recognise this comment (`comment-style.md` § 2, Signature marker).
+There is no subject line: the badge is followed directly by the problem, with no em dash between them. The `<!-- sig: … -->` marker is the last line. GitHub does not render it; the next run reads it to recognise this comment (`comment-style.md` § 2, Signature marker). Certainty, pattern name and agents are never posted; they stay in the Step 7 preview.
 
 Use the badge that matches the classification:
 - `**🔴 [Must]**` for required changes

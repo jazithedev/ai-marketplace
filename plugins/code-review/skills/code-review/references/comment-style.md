@@ -45,7 +45,6 @@ is a sentence that gets skipped.
 
 </details>
 
-_Certainty: {N}% · Pattern: {name} · Agents: {which agreed}_
 <!-- sig: {signature} -->
 ````
 
@@ -67,12 +66,10 @@ In practice:
 | Problem | always | always | always — the question, then what is unclear |
 | Suggested fix | nearly always | usually | rarely — there is nothing to fix yet |
 | Why | often | sometimes | seldom |
-| Footer | always | always | always |
 | Signature marker | always | always | always |
 
-A General Finding is the one exception: its templates carry the certainty inline, as the leading
-`[{certainty}%]`, instead of a separate footer line, and its badge has no emoji:
-`- [{certainty}%] **[Must]** {problem} <!-- sig: {signature} -->`. The bold badge marks where each
+A General Finding is the one exception: its badge has no emoji, and its signature marker ends its
+first line: `- **[Must]** {problem} <!-- sig: {signature} -->`. The bold badge marks where each
 item starts, and a blank line separates consecutive items.
 
 ### Problem — one to three sentences
@@ -110,7 +107,7 @@ with hedging — but ask yourself first whether the finding is really a `[Questi
 
 **When the snippet itself contains a fenced block, open the outer fence with four backticks.** A
 three-backtick outer fence is closed by the first bare three-backtick line inside it. Everything after
-that point — the rest of the fix, the whole `Why` fold, the footer — is swallowed into a code block.
+that point — the rest of the fix, the whole `Why` fold — is swallowed into a code block.
 The comment still posts and nothing reports an error, so the first sign of trouble is a comment that
 renders as a wall of literal text with no fold. This is measured, not theoretical: it happened to a
 real `[Must]` comment whose fix demonstrated a markdown template.
@@ -162,17 +159,15 @@ Two mechanical notes:
 - The summary text is exactly `Why`. Not `Why?`, not `Why this matters`, not `Details`. A review is
   easier to scan when every fold looks the same.
 
-### Footer
+### No certainty footer
 
-`_Certainty: {N}% · Pattern: {name} · Agents: {which agreed}_`, on its own line, last, outside the
-fold. Disagreement annotations belong here too.
-
-It sits outside the fold because it qualifies the whole finding rather than the argument for it. A
-reader who never opens the `Why` still needs to know how sure the reviewer is.
+A posted comment carries no `Certainty`, `Pattern` or `Agents` line, and no `[{certainty}%]` prefix.
+Those numbers are for you, not the author. They stay in the Step 7 preview, together with any
+disagreement annotation.
 
 ### Signature marker
 
-`<!-- sig: {signature} -->`, the very last line, after the footer. GitHub does not render HTML
+`<!-- sig: {signature} -->`, the very last line. GitHub does not render HTML
 comments, so the author never sees it. The next review run reads it to recognise its own earlier
 comments (`agents/previous-comments.md` step 2), so it must be present on every posted finding.
 
@@ -213,7 +208,7 @@ in § 4 are the exception: those are comment bodies, so they meet every rule bel
 9. **Numbers, not vague quantifiers.** `38 of 48 sibling files` beats `most sibling files`.
 10. **One hedge maximum.** `I did not check whether the schema cascades` is useful once. Stacked
     hedging (`would appear to possibly`) reads as though you are unsure of the finding itself — and
-    if you are, the footer's `Certainty` is where that belongs.
+    if you are, lower the finding's `certainty` instead.
 
 ---
 
@@ -266,7 +261,6 @@ reached from here.
 
 </details>
 
-_Certainty: 95% · Pattern: fabricated-remaining-budget · Agents: bug-smell-scan_
 <!-- sig: fabricated-remaining-budget:deny -->
 ````
 
@@ -284,7 +278,6 @@ SendQuotaResult::denied(tier: SendTier::Unpaid, limit: 100, remaining: 0, paidDa
 
 Same in `CreateTest.php:47` and `SendQuotaExceededExceptionTest.php:20` and `:37`.
 
-_Certainty: 90% · Pattern: positional-args · Agents: jazi-craftsmanship_
 <!-- sig: positional-args:sendquotaresult::denied -->
 ````
 
@@ -300,7 +293,6 @@ here would cost the reader a click and give them nothing.
 limiter, so a customer who spends the paid budget and then downgrades gets a fresh unpaid budget the
 same day.
 
-_Certainty: 85% · Pattern: tier-change-budget-reset · Agents: bug-smell-scan_
 <!-- sig: tier-change-budget-reset -->
 ````
 
@@ -317,7 +309,7 @@ For each comment:
 - [ ] The Why either carries evidence the top does not, or is not there.
 - [ ] `<summary>Why</summary>`, with blank lines inside the `<details>`.
 - [ ] Section 3 run down: no metaphors, no stacked clauses, identifiers verbatim.
-- [ ] Footer present, on its own line, outside the fold.
+- [ ] No `Certainty` footer and no `[{certainty}%]` prefix.
 - [ ] `<!-- sig: … -->` present as the last line (a General Finding: at the end of its first line).
 
 If a comment still feels long after this, the usual cause is that it is two findings wearing one
