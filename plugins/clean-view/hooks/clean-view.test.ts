@@ -87,14 +87,57 @@ test('6. any tool is denied before a plan exists and allowed after', async ($, o
   expect(JSON.stringify(allowed)).not.toContain('needs a plan first')
 })
 
-test('3. a permission prompt shows Needs you', async ($, on) => {
+const ask = { tool: 'Bash', input: { command: 'rm x' }, tool_use_id: 'u1', approver: 'person' } as any
+
+test('3. a permission prompt shows Needs you, and the approved call clears it', async ($, on) => {
   world(on)
-  on('classic.Notification', () => ({}) as any)
+  on('tool.check', () => ({ decision: 'ask' }) as any)
   await $.turn.start({ text: 'Make my page', turnId: 't1' })
-  await $.classic.Notification({ message: 'Claude needs your permission', notification_type: 'permission_prompt' } as any)
+  await $.tool.call({ tool: PLAN, steps: ['Read notes', 'Build page'] } as any)
+  await $.tool.check(ask)
   const drawn = await band($)
   expect(drawn).toContain('Needs you')
   expect(drawn).toContain('Claude needs your OK to continue')
+  await $.tool.call({ tool: 'Bash', command: 'rm x', tool_use_id: 'u1' } as any)
+  expect(await band($)).not.toContain('Needs you')
+})
+
+test('3b. a call refused at its permission dialog pauses the job as Stuck', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  on('turn.start', (_$: any, e: any) => ({ turnId: e.turnId }))
+  on('tool.call', { tool: 'Bash' }, () => ({ deny: 'The user said no' }) as any)
+  on('tool.call', () => ({ result: 'ok', text: 'ok' }) as any)
+  on('tool.check', () => ({ decision: 'ask' }) as any)
+  await $.turn.start({ text: 'Make my page', turnId: 't1' })
+  await $.tool.call({ tool: PLAN, steps: ['Read notes', 'Build page'] } as any)
+  await $.tool.check(ask)
+  expect(await band($)).toContain('Needs you')
+  await $.tool.call({ tool: 'Bash', command: 'rm x', tool_use_id: 'u1' } as any)
+  expect(await band($)).toContain('you said no to a step')
+})
+
+test('3c. three failing calls mark Stuck, and a success clears it', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  on('turn.start', (_$: any, e: any) => ({ turnId: e.turnId }))
+  on('tool.call', { tool: 'Bash' }, () => ({ isError: true, result: 'boom', text: 'boom' }) as any)
+  on('tool.call', () => ({ result: 'ok', text: 'ok' }) as any)
+  await $.turn.start({ text: 'Make my page', turnId: 't1' })
+  await $.tool.call({ tool: PLAN, steps: ['Read notes', 'Build page'] } as any)
+  for (let i = 0; i < 3; i++) await $.tool.call({ tool: 'Bash', command: 'false' } as any)
+  expect(await band($)).toContain('a step keeps failing')
+  await $.tool.call({ tool: 'Read', file_path: 'a' } as any)
+  expect(await band($)).not.toContain('Stuck')
+})
+
+test('3d. the rules ride beside each typed prompt, not beside a slash command', async ($, on) => {
+  world(on)
+  on('prompt.submit', (_$: any, e: any) => ({ text: e.text, context: e.context }) as any)
+  const typed = await $.prompt.submit({ text: 'Make my page' } as any)
+  expect(JSON.stringify((typed as any).context)).toContain('Clean View is active')
+  const command = await $.prompt.submit({ text: '/model' } as any)
+  expect(JSON.stringify((command as any).context ?? [])).not.toContain('Clean View is active')
 })
 
 test('4. there is no on/off button, and a finished card stays whole', async ($, on) => {

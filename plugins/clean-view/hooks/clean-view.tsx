@@ -168,6 +168,24 @@ const pad = (s: string, width: number): string => {
 let timer: { cancel: () => void } | undefined
 let failures = 0
 let denials = 0
+// The call whose permission dialog is open, so its outcome can clear Needs you.
+let askedFor: string | null = null
+
+// Sent beside each prompt. Not via prompt.compose or classic.* hooks: an organisation's
+// policy plugin (e.g. cc-plugin-sec-default) continues those past a person's plugins,
+// and the engine prints a "hook was skipped" line in the transcript each time.
+export const RULES = [
+  'Clean View is active: the person sees only a checklist of your plan, not your tool calls.',
+  '- Write every step name in plain English a non-technical person understands, under 40 characters, starting with a verb, like "Build the pricing section".',
+  '- Never put file paths, file names, commands, code or tool names in a step name.',
+  `- For every request, even a quick question, call ${PLAN} first (load it with ToolSearch if it is deferred). Then call ${REPORT} as real progress happens, and with percent 100 the moment a step finishes.`,
+  '- If TodoWrite or TaskCreate is available, its to-do list can serve as the plan instead.',
+].join('\n')
+
+const callId = (e: unknown): string => {
+  const x = e as { tool_use_id?: string; tool?: string }
+  return x.tool_use_id ?? `tool:${x.tool ?? ''}`
+}
 
 
 function syncTimer($: any, phase: CleanPhase): void {
@@ -192,6 +210,44 @@ async function patch($: any, fn: (c: Checklist) => Checklist): Promise<Checklist
 async function finish($: any, phase: CleanPhase, extra: Partial<Checklist>): Promise<void> {
   const now = await $.clock.now()
   await patch($, c => ({ ...c, phase, finishedAt: now, ...extra }))
+}
+
+// Core hands a refused permission dialog back as an error result with one of these texts.
+const REFUSAL = /^Permission to use .+ has been denied|doesn't want to proceed with this tool use|tool use was rejected/
+
+// What a finished tool call means for the card: a refused dialog pauses the job, three
+// errors in a row mark it Stuck, a success clears Stuck and Needs you.
+async function settle(
+  $: any, e: unknown, r: { deny?: string; isError?: true; text?: string }, aborted: boolean,
+): Promise<void> {
+  const wasAsked = askedFor !== null && askedFor === callId(e)
+  if (wasAsked) askedFor = null
+  if (aborted) return
+  const refused = typeof r.deny === 'string' || (r.isError === true && REFUSAL.test(String(r.text ?? '')))
+  if (refused) {
+    if (wasAsked) {
+      await patch($, c => ({
+        ...c, phase: 'stuck', needsYouReason: null, stuckReason: 'you said no to a step, so Claude paused',
+      }))
+    }
+    return
+  }
+  if (r.isError === true) {
+    failures += 1
+    if (failures >= 3) {
+      await patch($, c => ({
+        ...c, phase: 'stuck', needsYouReason: null, stuckReason: 'a step keeps failing, Claude is trying another way',
+      }))
+    } else if (wasAsked) {
+      await patch($, c => (c.phase === 'needs-you' ? { ...c, phase: 'working', needsYouReason: null } : c))
+    }
+    return
+  }
+  failures = 0
+  const c = await read($, checklist)
+  if (c.phase === 'stuck' || (wasAsked && c.phase === 'needs-you')) {
+    await patch($, cur => ({ ...cur, phase: 'working', stuckReason: null, needsYouReason: null }))
+  }
 }
 
 async function resume($: any): Promise<void> {
@@ -231,18 +287,6 @@ export const registerCleanView = (on: On): void => {
   on('command.run', async ($, e, next) => {
     if (await read($, isCommandDraft)) await update($, isCommandDraft, () => false)
     return next(e)
-  })
-
-  on('prompt.compose', async ($, e, next) => {
-    const out = await next(e)
-    const text = [
-      'Clean View is active: the person sees only a checklist of your plan, not your tool calls.',
-      '- Write every step name in plain English a non-technical person understands, under 40 characters, starting with a verb, like "Build the pricing section".',
-      '- Never put file paths, file names, commands, code or tool names in a step name.',
-      `- For every request, even a quick question, call ${PLAN} first (load it with ToolSearch if it is deferred). Then call ${REPORT} as real progress happens, and with percent 100 the moment a step finishes.`,
-      '- If TodoWrite or TaskCreate is available, its to-do list can serve as the plan instead.',
-    ].join('\n')
-    return { ...out, sections: [...out.sections, { id: 'clean-view:rules', text, scope: 'session' as const }] }
   })
 
   on('turn.start', async ($, e, next) => {
@@ -327,7 +371,27 @@ export const registerCleanView = (on: On): void => {
         return { ...cur, tasks: normalize(list) }
       })
     }
-    return next(e)
+    const r = await next(e)
+    try {
+      await settle($, e, r as { deny?: string; isError?: true }, next.signal.aborted)
+    } catch {
+      // The card is cosmetic: never let it change the tool's result.
+    }
+    return r
+  }).catch(($, e, next) => next(e))
+
+  // A permission dialog is about to open for the person: the card shows Needs you.
+  on('tool.check', async ($, e, next) => {
+    const v = await next(e)
+    if (e.agentId === undefined && e.tool_use_id !== undefined && v.decision === 'ask'
+      && e.approver === 'person' && e.tool !== 'AskUserQuestion') {
+      const c = await read($, checklist)
+      if (c.phase === 'working') {
+        askedFor = callId(e)
+        await patch($, cur => ({ ...cur, phase: 'needs-you', needsYouReason: 'Claude needs your OK to continue' }))
+      }
+    }
+    return v
   }).catch(($, e, next) => next(e))
 
   on('tool.call', { tool: PLAN }, async ($, e) => {
@@ -344,39 +408,6 @@ export const registerCleanView = (on: On): void => {
     const percent = Math.min(100, Math.max(0, Number(r.percent ?? 0)))
     await patch($, c => ({ ...c, tasks: reportProgress(c.tasks, String(r.task ?? ''), percent) }))
     return { result: `Progress noted: ${Math.round(percent)}%.` }
-  })
-
-  on('classic.Notification', async ($, e, next) => {
-    const c = await read($, checklist)
-    if (c.phase === 'working' || c.phase === 'needs-you') {
-      await patch($, cur => ({ ...cur, phase: 'needs-you', needsYouReason: 'Claude needs your OK to continue' }))
-    }
-    return next(e)
-  })
-
-  on('classic.PermissionDenied', async ($, e, next) => {
-    await patch($, c => ({
-      ...c, phase: 'stuck', stuckReason: 'you said no to a step, so Claude paused',
-    }))
-    return next(e)
-  })
-
-  on('classic.PostToolUseFailure', async ($, e, next) => {
-    if (e.is_interrupt === true) return next(e)
-    failures += 1
-    if (failures >= 3) {
-      await patch($, c => ({
-        ...c, phase: 'stuck', stuckReason: 'a step keeps failing, Claude is trying another way',
-      }))
-    }
-    return next(e)
-  })
-
-  on('classic.PostToolUse', async ($, e, next) => {
-    failures = 0
-    const c = await read($, checklist)
-    if (c.phase === 'stuck') await patch($, cur => ({ ...cur, phase: 'working', stuckReason: null }))
-    return next(e)
   })
 
   // A turn that died on an API error leaves the card Stuck; the next model request means
@@ -425,8 +456,9 @@ export const registerCleanView = (on: On): void => {
 
   on('prompt.submit', async ($, e, next) => {
     if (await read($, isCommandDraft)) await update($, isCommandDraft, () => false)
-    return next(e)
-  })
+    if (e.text.trim().startsWith('/')) return next(e)
+    return next({ ...e, context: [...(e.context ?? []), RULES] })
+  }).catch(($, e, next) => next(e))
 
   // Hide the technical rows.
   for (const component of ['ToolUse', 'ToolResult', 'ToolGroup'] as const) {
