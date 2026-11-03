@@ -2,6 +2,30 @@
 
 Each "after" keeps every fact from the "before".
 
+## Progress update (budget: 12 words)
+
+Before:
+
+> All 16 review agents are running now: 9 on the payments stack and 7 on the hotfix. I'll consolidate their findings when they report back, then fix the confirmed ones on the branches.
+
+After:
+
+> 16 review agents running; I'll consolidate and fix when they report.
+
+## Report on finished work (budget: 60 words)
+
+Before:
+
+> I've completed the migration of the export job. I created a new branch, moved the job to the new queue, updated the configuration, and ran the test suite, which passed. I also checked the staging logs and everything looks fine there. One thing to keep in mind: the old queue still has 40 jobs in it, so those will need to be drained before we remove it. The PR is ready for your review.
+
+After:
+
+> Export job moved to the new queue. Tests pass, staging logs are clean, and the PR is ready for review.
+>
+> Before removing the old queue, drain its 40 remaining jobs.
+
+The list of steps taken carries nothing the reader acts on.
+
 ## Investigation summary
 
 Before:

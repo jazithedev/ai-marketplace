@@ -4,9 +4,9 @@ A tone of voice for Claude. Everything it writes stays short, plain and easy to 
 
 ## Features
 
-- **Always on**: a session-start hook loads the voice into every session, so replies, investigations, tickets and docs come out short the first time. You never ask for a second, shorter version.
-- **One idea, one sentence**: repeated sentences and bullets that make the same point are merged.
-- **Real cuts**: when shortening a document, content repeated across sections goes, not only extra words. The before and after word counts are measured and reported.
+- **Always on**: a session-start hook loads the voice and the banned-word list into every session, so text comes out short the first time.
+- **Word budgets**: progress updates 12 words, answers 40, reports 60. Facts that don't fit go into a short list.
+- **Real cuts**: shortening existing text aims for 50% fewer words, and the before and after counts are reported in 1 line.
 - **Plain English**: short active sentences, common words, no idioms or AI-writing filler ("delve", "It's worth noting that").
 - **Respects templates**: other skills keep their required sections; only the wording inside gets tighter. Code, commands, quotes and error messages are never changed.
 
