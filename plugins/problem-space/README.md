@@ -26,6 +26,7 @@ Use them in that order: analyse the problem, ask what is still open, then slice 
 - **Merged, not padded** — parts of one decision become one question; there is no target count, and "nothing is open" is a valid answer
 - **Reads like a person wrote it** — numbered, grouped only when long, no markers, owner tags or offers; facts from the code appear as short context inside the questions
 - **Runs on request only** — when you ask for the questions, not on its own
+- **Asks who to mention before posting** — offers people named in the ticket's description and puts the chosen ones at the start of the comment
 
 ### User Story Writer
 

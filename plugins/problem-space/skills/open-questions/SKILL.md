@@ -95,4 +95,12 @@ Do not suggest answers unless the user asks for a suggestion. When they do, add 
 
 Show the list in the chat and stop. Posting it anywhere is a separate request.
 
+## 7. Before posting, ask who to mention
+
+When the user asks to post the questions as a comment (on a Jira ticket, a pull request, an issue or similar), ask them first who to mention at the very beginning of the comment. Never pick the people yourself, and never post before they answer.
+
+Build the candidate list from the ticket's description: people it names or mentions, and owners of the decisions it refers to. Give each candidate a short reason taken from the description, such as "named as the decision owner for pricing". Ask with `AskUserQuestion`, `multiSelect: true`, at most 4 candidates, ordered by how many of the questions they can answer. If there are more than 4, list the rest in the question text so the user can pick them through "Other". If the description names nobody, say so in the question and let the user type the names.
+
+Put the chosen people at the very start of the comment, before the opening sentence, as real mentions in that tool's format (a Jira account mention, a GitHub `@login`), so they get notified. Resolve each name to its account first; if a name can't be resolved, tell the user instead of posting it as plain text. If the user picks nobody, post without mentions.
+
 See `references/example.md` for a full before-and-after.
