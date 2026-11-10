@@ -48,6 +48,13 @@ reviewers and QA can reference each one unambiguously ("AC 3"). Draft these from
 let the user refine them in the preview. Prefer several small, independently checkable criteria
 over one big one.
 
+**Quality bar.** Every criterion must be:
+
+1. **Binary** — it either passes or fails.
+2. **Observable** — checked from outside the code: UI, API response, stored data, email, export.
+3. **Specific** — exact values, limits, formats and messages; no "fast", "correct", "as expected".
+4. **Edge-covered** — empty, limit, no-access and failure cases are stated, not left implied.
+
 **Shape of a criterion:** each numbered item holds **one full, coherent sentence** that states the
 behaviour to verify — no bold keywords, no line breaks inside the item, no telegram-style
 fragments. Fold a Given/When/Then ordering into the sentence when it reads naturally

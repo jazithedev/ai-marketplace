@@ -98,6 +98,8 @@ Read `references/ticket-template.md` and assemble the **Description** body:
   ("Given …, when …, then …"); when it doesn't, write a plain sentence instead — a readable sentence
   always takes precedence over the GIVEN/WHEN/THEN format. See the template and
   `references/creating-with-an-expander.md` for the exact markdown and ADF.
+  - **Every criterion meets the quality bar:** binary, observable, specific, edge-covered — see
+    the template.
   - **A criterion states observable behaviour, in plain language.** Implementation decisions —
     naming conventions, types and nullability, internal payload structure — are not acceptance
     criteria and belong in the Implementation Plan. The template's "What is not an acceptance
