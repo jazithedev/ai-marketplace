@@ -138,6 +138,32 @@ sprintf('UPDATE %s SET status = :status WHERE %s = :id', $table, $column);
 'UPDATE orders SET status = :status WHERE customer_id = :id';
 ```
 
+### 54. Constants are inlined, or private
+
+A constant that only its own class reads is inlined where it is used. If it stays a constant, it is `private`, even with a single use; suggest inlining it then (`[Optional]`). A `public` constant that no other production class reads is a **MUST**. A test that reads `Class::CONSTANT` does not justify `public`: the test asserts the literal value. A public constant read by two or more production classes is allowed; suggest an enum (pattern 50). This is an explicit rule: sibling files that still use public constants do not downgrade it.
+
+```php
+// BAD
+final class MapOrderFailure
+{
+    public const string ORDER_NOT_FOUND = 'ORDER_NOT_FOUND';
+
+    private function notFound(): ResponseInterface
+    {
+        return $this->error(code: self::ORDER_NOT_FOUND);
+    }
+}
+
+// GOOD
+final class MapOrderFailure
+{
+    private function notFound(): ResponseInterface
+    {
+        return $this->error(code: 'ORDER_NOT_FOUND');
+    }
+}
+```
+
 ---
 
 ## MUST — Architecture & Design
@@ -243,6 +269,8 @@ When fixing issues, address the root cause, not the symptom. If bad data reaches
 ### 25. VO constructors must validate all invariants
 
 A Value Object instance must always be valid. All validation happens in the constructor (or factory method). If input is invalid, throw — never create a half-valid instance.
+
+This includes limits on a collection: a cap checked by a separate `ensure*()` helper before a raw array is passed on belongs in a dedicated collection VO (`ddd-review-checklist.md`, Invariant Protection).
 
 ### 26. Guard clauses over silent handling
 
@@ -376,6 +404,8 @@ When building a new array from an existing one, `array_map()` is more readable a
 ### 50. Enum over string constants
 
 When a fixed set of values exists, consider using a PHP enum instead of string constants. Enums provide type safety and IDE support.
+
+A constant only its own class reads is covered by pattern 54, not this one.
 
 ---
 
