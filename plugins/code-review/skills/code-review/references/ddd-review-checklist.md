@@ -44,6 +44,17 @@ Not violations: the Guard step (entitlement, ownership, existence), `if`s on app
 - Entities that can be constructed in an invalid state
 - Public setters that allow bypassing invariant checks
 - Validation logic duplicated across multiple locations instead of centralized in the domain object
+- Collection limit checked outside its value object — **MUST**. A shape or size check (`ensure*()`, `assert*()`, `validate*()`) runs as a separate static or helper call, and the raw array or primitive is then passed on. The caller has to remember the check, and the value can exist without it. Fix: a dedicated collection VO whose named constructor throws. Checks that need outside state (uniqueness against storage, ownership) are out of scope; they belong in a Domain Service or an Application precondition.
+
+  ```php
+  // BAD
+  Limits::ensureListable(count($positions));
+  $widget = Widget::create(positions: $positions);
+
+  // GOOD
+  $widget = Widget::create(positions: Positions::fromList($positions)); // throws when over the limit
+  ```
+- VO that stores extra context only to validate itself — `[Optional]`. For example a `Selection` that keeps the owning aggregate's type only so the aggregate can call `isFor($type)`. Let the aggregate build the VO from its own state instead, so the mismatched state cannot exist.
 
 ### Aggregate Boundary Violations
 - External code directly accessing or modifying child entities within an aggregate (bypassing the root)
