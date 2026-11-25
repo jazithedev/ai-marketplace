@@ -73,6 +73,44 @@ After:
 
 > - Profile updates don't clear the cache, so users see old data, such as their old name, for up to 1 hour (the cache TTL).
 
+## Walkthrough (budget: 120 words)
+
+Question: "How does the login throttling PR work?"
+
+Before (about 450 words): a section each for the config change, the two counters, the order of events, the reset on success, the user message, why Redis, the tests and 3 limits, with 4 to 6 long bullets per section.
+
+After:
+
+> It turns on Symfony's built-in login throttling; no new PHP code.
+>
+> - 5 failed tries per e-mail and IP, 25 per IP, per minute.
+> - Counted before the password check, so blocked tries look identical.
+> - A successful login resets the e-mail counter.
+> - Counts live in Redis, shared by both app servers.
+> - Over the limit: a translated "too many attempts" message.
+>
+> **Risk:** without trusted proxies, all visitors share one IP and lock each other out.
+>
+> 3 more (tests, remember-me logins, Redis down): say if you want them.
+
+The risk stays in the main text. The rest waits behind "N more".
+
+## PR description (budget: 80 words)
+
+Before (about 220 words): 9 bullets on decisions, removed classes, translation counts, the plan file and why the test uses JSON.
+
+After:
+
+> Login, resend and reset no longer reveal whether an e-mail has an account.
+>
+> - Both login failures say "Bad credentials."; "account not active" stays.
+> - Resend always answers `true`; mails only inactive accounts.
+> - Removed `EmailScalar`, its only user was resend.
+>
+> **Merge first**: the next 3 MRs build on this branch.
+>
+> Refs #123
+
 ## Document with repeated sections
 
 Before (a decision record, 3 sections):
