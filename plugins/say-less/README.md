@@ -1,14 +1,15 @@
 # Say less
 
-A tone of voice for Claude. Everything it writes stays short, plain and easy to read for non-native English speakers, and keeps every fact, decision, risk and next step.
+A tone of voice for Claude. Every output is cut to the least text the reader needs: short, plain and easy to read for non-native English speakers, while keeping every decision, risk and next step.
 
 ## Features
 
-- **Always on**: a session-start hook loads the voice and the banned-word list into every session, so text comes out short the first time.
-- **Word budgets**: progress updates 12 words, answers 40, reports 60. Facts that don't fit go into a short list.
+- **Always on**: a session-start hook loads the voice and the banned-word list into every session, and a short reminder is added to every prompt so the budgets don't fade in long sessions.
+- **Word budgets for every output**: progress 12 words, answers 40, reports 60, walkthroughs 120, PR bodies 80, commit bodies 40, ticket sections 40, plans 300, notes 150. Lists count toward the budget (at most 7 items of 10 words); the rest goes behind "N more: say if you want them".
+- **Wins over other skills**: other skills decide which sections and facts exist; this voice decides how many words they get.
 - **Real cuts**: shortening existing text aims for 50% fewer words, and the before and after counts are reported in 1 line.
 - **Plain English**: short active sentences, common words, no idioms or AI-writing filler ("delve", "It's worth noting that").
-- **Respects templates**: other skills keep their required sections; only the wording inside gets tighter. Code, commands, quotes and error messages are never changed.
+- **Respects templates**: required sections stay, each within its budget. Code, commands, quotes and error messages are never changed.
 
 ## Installation
 
