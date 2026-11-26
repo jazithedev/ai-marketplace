@@ -207,6 +207,19 @@
       "keywords": ["writing", "tone-of-voice", "brevity", "readability", "plain-english"],
       "license": "MIT",
       "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/say-less"
+    },
+    {
+      "name": "safe-rm",
+      "description": "A PreToolUse hook that blocks recursive or forced rm commands aimed outside the project directory, before the permission prompt appears. Claude gets the reason back and asks you instead.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Krzysztof Trzos"
+      },
+      "source": "./plugins/safe-rm",
+      "category": "security",
+      "keywords": ["safety", "hooks", "rm", "guardrail", "bash"],
+      "license": "MIT",
+      "homepage": "https://github.com/jazithedev/ai-marketplace/tree/main/plugins/safe-rm"
     }
   ]
 }

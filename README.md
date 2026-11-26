@@ -41,6 +41,7 @@ Community-driven collection of Claude Code plugins — skills, agents, and tools
 | [service-classifier](plugins/service-classifier) | Quality | Tell Application Services (CQRS handlers), Application Preconditions and Domain Services apart — classify a class or decide where new logic belongs, using the GLASS and FOE mnemonics; advice only, no edits |
 | [problem-space](plugins/problem-space) | Productivity | Understand a problem before building it — `/problem-space:problem-analyst` analyses stakeholders, pain points, requirements, business rules, success criteria, assumptions and risks; `/problem-space:open-questions` turns that into a short list of the questions only people can answer; `/problem-space:user-story-writer` slices it into thin, INVEST-compliant user stories; none suggests solutions ([source](https://github.com/andrealaforgia/claude-code-agents)) |
 | [say-less](plugins/say-less) | Productivity | An always-on tone of voice: everything Claude writes (replies, investigations, tickets, PRs, docs) stays short and plain for non-native readers, with no facts lost; switch with `/say-less:say-less off` or `on` |
+| [safe-rm](plugins/safe-rm) | Security | A hook that blocks recursive or forced `rm` outside the project directory before the permission prompt appears; Claude gets the reason and asks you instead |
 
 ### From external repositories
 
