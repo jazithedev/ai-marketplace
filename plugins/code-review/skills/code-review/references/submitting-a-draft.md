@@ -40,7 +40,7 @@ A comment the reviewer deleted is simply missing from `comments`. A pending comm
 
 ## 2. Rebuild the Summary table
 
-Count the badges in what is left: each pending comment (general findings included, as they are comments too) and each pending reply that carries a badge. Rewrite the Summary table from those counts. Drop a row whose count is now 0, and drop the whole table when nothing is left. Leave every other section of the body as it is. The reviewer may have edited it.
+Count the badges in what is left: each pending comment (general findings included, as they are comments too) and each pending reply that carries a badge. Rewrite the Summary table from those counts. Drop a row whose count is now 0, and drop the Comments heading and table when nothing is left. Leave every other section of the body as it is. The reviewer may have edited it.
 
 ```bash
 gh api -X PUT repos/{owner}/{repo}/pulls/{pr}/reviews/{review_id} --input body.json   # {"body": "..."}

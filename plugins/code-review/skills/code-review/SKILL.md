@@ -620,18 +620,21 @@ _This code review was made automatically by Krzysztof Trzos Code Review AI Skill
 ### Reasons for change found
 - {one reason, in one plain sentence, from Agent A's `REASONS_FOR_CHANGE`}
 
-| Severity    | Count | Pattern                                             |
-|-------------|-------|-----------------------------------------------------|
-| 🔴 [Must]     | {n}   | {pattern1 (locations), pattern2 (locations), ...}   |
-| 🟡 [Optional] | {n}   | {pattern1, pattern2, ...}                           |
-| 🔵 [Question] | {n}   | {pattern1, pattern2, ...}                           |
+### Comments
+| Severity | Count | Pattern                                             |
+|----------|-------|-----------------------------------------------------|
+| 🔴       | {n}   | {pattern1 (locations), pattern2 (locations), ...}   |
+| 🟡       | {n}   | {pattern1, pattern2, ...}                           |
+| 🔵       | {n}   | {pattern1, pattern2, ...}                           |
 
-*(Omit rows with count 0. Omit the table when zero findings posted. The Summary heading and Reasons for change found stay.)*
+*(Omit rows with count 0. Omit the Comments heading and table when zero findings posted. The Summary heading and Reasons for change found stay.)*
 ```
+
+The Severity column holds the coloured dot only: 🔴 for [Must], 🟡 for [Optional], 🔵 for [Question].
 
 **Reasons for change found** comes first in the Summary, above the table. It lists why the PR changes the code, one sentence per item, exactly as Agent A returned them. One item is the healthy case. Several items are how the author sees the PR carries more than one reason. Do not add verdicts, categories, file lists or split plans here: a scope violation is a finding (see below).
 
-**The template above is exhaustive.** The top-level body contains exactly: the auto-generation notice and the Summary section (Reasons for change found, then the table). Nothing else. Findings never go in the body, not even PR-level ones: every finding is its own comment on the code (*Anchoring a general finding*, below).
+**The template above is exhaustive.** The top-level body contains exactly: the auto-generation notice and the Summary section (Reasons for change found, then Comments with the table). Nothing else. Findings never go in the body, not even PR-level ones: every finding is its own comment on the code (*Anchoring a general finding*, below).
 
 **Do NOT include in the top-level body** — these are local-preview-only sections from Step 7, and posting them on the PR is noise:
 - PR Discipline (size and the scope verdict; a scope FAIL is posted as a finding)
