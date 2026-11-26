@@ -501,7 +501,7 @@ _Within **Required Changes**, **Suggestions**, and **Questions**, separate conse
 
 _`{subject}` below is the finding's `description`. It exists only in this preview, so the reviewer can triage a long list one line per finding. The posted comments have no subject line (Step 8)._
 
-### Reasons for change
+### Reasons for change found
 - {Agent A's `REASONS_FOR_CHANGE`, one sentence per item — posted as is in the Summary (Step 8)}
 
 ### PR Discipline
@@ -616,21 +616,22 @@ The first line of the body is a **marker** encoding the HEAD SHA and the reviewe
 _This code review was made automatically by Krzysztof Trzos Code Review AI Skill at <SHORT_SHA> (memory <UNIX_MTIME>)._
 
 ## Summary
+
+### Reasons for change found
+- {one reason, in one plain sentence, from Agent A's `REASONS_FOR_CHANGE`}
+
 | Severity    | Count | Pattern                                             |
 |-------------|-------|-----------------------------------------------------|
 | 🔴 [Must]     | {n}   | {pattern1 (locations), pattern2 (locations), ...}   |
 | 🟡 [Optional] | {n}   | {pattern1, pattern2, ...}                           |
 | 🔵 [Question] | {n}   | {pattern1, pattern2, ...}                           |
 
-*(Omit rows with count 0. Omit the table when zero findings posted. The Summary heading and Reasons for change stay.)*
-
-### Reasons for change
-- {one reason, in one plain sentence, from Agent A's `REASONS_FOR_CHANGE`}
+*(Omit rows with count 0. Omit the table when zero findings posted. The Summary heading and Reasons for change found stay.)*
 ```
 
-**Reasons for change** lists why the PR changes the code, one sentence per item, exactly as Agent A returned them. One item is the healthy case. Several items are how the author sees the PR carries more than one reason. Do not add verdicts, categories, file lists or split plans here: a scope violation is a finding (see below).
+**Reasons for change found** comes first in the Summary, above the table. It lists why the PR changes the code, one sentence per item, exactly as Agent A returned them. One item is the healthy case. Several items are how the author sees the PR carries more than one reason. Do not add verdicts, categories, file lists or split plans here: a scope violation is a finding (see below).
 
-**The template above is exhaustive.** The top-level body contains exactly: the auto-generation notice and the Summary section (table plus Reasons for change). Nothing else. Findings never go in the body, not even PR-level ones: every finding is its own comment on the code (*Anchoring a general finding*, below).
+**The template above is exhaustive.** The top-level body contains exactly: the auto-generation notice and the Summary section (Reasons for change found, then the table). Nothing else. Findings never go in the body, not even PR-level ones: every finding is its own comment on the code (*Anchoring a general finding*, below).
 
 **Do NOT include in the top-level body** — these are local-preview-only sections from Step 7, and posting them on the PR is noise:
 - PR Discipline (size and the scope verdict; a scope FAIL is posted as a finding)
@@ -972,7 +973,7 @@ This mode skips Phases 1 and 2 entirely. It addresses author responses on the sk
 - **Don't nitpick style** if the project has a formatter/linter (ECS, PHP-CS-Fixer).
 - **State review scope** when not reviewing everything: "Checked only Deptrac files."
 - **Surface obstacles, don't hide them.** If a subagent reported a setup issue or workaround, it goes in the "Obstacles Encountered" section so follow-up work doesn't pay the same cost twice.
-- **Inline comments belong on lines.** When posting to GitHub, every finding that points at a real file:line in the diff goes as an inline review comment on that line, not in the top-level body. Genuinely PR-level findings are comments too, each on its own fallback anchor. The top-level body holds only the auto-generation notice and the Summary with Reasons for change (Step 8). Reviewers should see each finding next to the code it's about, not as a wall of file references.
+- **Inline comments belong on lines.** When posting to GitHub, every finding that points at a real file:line in the diff goes as an inline review comment on that line, not in the top-level body. Genuinely PR-level findings are comments too, each on its own fallback anchor. The top-level body holds only the auto-generation notice and the Summary with Reasons for change found (Step 8). Reviewers should see each finding next to the code it's about, not as a wall of file references.
 - **Confirmations belong in the thread they're confirming.** When another reviewer (Copilot, a teammate) or an earlier run of this skill has already raised the same point, react with 👍 on that comment if you have nothing to add, or post a short reply inside the thread if there is missing context. Never re-flag it as a new inline finding, and never collect confirmations under a "Confirming existing review threads" heading in the top-level body — there is no exception, not for drafts and not for harness denials (Step 8).
 - **Never hide a blocking point in an outdated thread.** GitHub folds outdated threads away. A `[Must]` or `[Question]` that follows up on one gets a fresh inline comment on the current line.
 - **Don't argue with your own earlier advice.** If the author changed the code because a prior skill comment asked them to, don't ask them to change it back over a preference. Raise it only when the result is wrong, and then say it corrects our earlier suggestion.
