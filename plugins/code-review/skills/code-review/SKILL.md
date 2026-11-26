@@ -232,7 +232,7 @@ Build a `comment_id -> {thread_id, resolved, outdated}` map (every comment in a 
 
 **GraphQL node ids carry a type prefix — do not mix them up.** `PRR_…` is a review, `PRRT_…` is a review thread, `PRRC_…` is a review comment. A thread mutation given a `PRR_` id fails with `NOT_FOUND` and writes nothing, which is safe but costs a retry.
 
-Additionally, parse each prior skill-authored review's body for `## General Findings` entries — see `agents/previous-comments.md` § Skill-self-detection for the parsing rules.
+Additionally, parse each prior skill-authored review's body for `## General Findings` entries (reviews from before v1.10.0 carry them; newer ones post every finding as its own comment) — see `agents/previous-comments.md` § Skill-self-detection for the parsing rules.
 
 Build the `{prior_skill_findings}` object with both `inline` and `general` collections — see `references/consolidation-rules.md` Section D for the exact shape. Pass it to Agent 4.
 
@@ -401,7 +401,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/consolidation-rules.md
    - **Same file, prior thread open** → 👍 react on the prior comment.
    - **Different file, prior thread open** → threaded reply on the oldest matching prior comment with a cross-file rollup listing the new locations.
    - **Only resolved priors match** → keep as a fresh inline finding (the rule was addressed for the old locations; this is new ground).
-   - **General Finding already in a prior body** → drop the candidate entirely.
+   - **General finding already raised** → in a prior body (before v1.10.0): drop it. As a prior comment: 👍 react when its thread is open, drop it when resolved.
 
    Classification escalation (e.g., prior was `[Optional]`, candidate is `[Must]`) flips Case 1 (react) into Case 2 (reply with an escalation note).
 
@@ -501,12 +501,15 @@ _Within **Required Changes**, **Suggestions**, and **Questions**, separate conse
 
 _`{subject}` below is the finding's `description`. It exists only in this preview, so the reviewer can triage a long list one line per finding. The posted comments have no subject line (Step 8)._
 
+### Reasons for change
+- {Agent A's `REASONS_FOR_CHANGE`, one sentence per item — posted as is in the Summary (Step 8)}
+
 ### PR Discipline
 {Agent A scope verdict and `{size_verdict}` from Step 1 — note the exception when Agent A granted
-one — with any suggested splits}
+one — with any suggested splits. Preview only: Step 8 posts no size, and a scope FAIL as a finding}
 
 ### Positive Observations
-- {things done well, from Agent 8. Omit section if none}
+- {things done well, from Agent 8. Omit section if none. Preview only, never posted}
 
 ### Required Changes ({count})
 Items that must be addressed before merge.
@@ -600,10 +603,10 @@ The single-comment-dump approach is **not** what we want. GitHub already support
 Split every finding into one of three buckets:
 
 - **Inline finding** — references a specific file:line that **is in the PR diff** on the RIGHT side (added or context lines in a hunk). Posted as an inline review comment on that exact line as part of the batched review.
-- **General finding** — anything else: PR-level concerns (description placeholders, scope, naming), cross-file findings where the referenced file is not in the PR, or findings whose line is outside any diff hunk. Posted in the top-level review body under a "General Findings" section.
+- **General finding** — anything else: PR-level concerns (description placeholders, scope, naming), cross-file findings where the referenced file is not in the PR, or findings whose line is outside any diff hunk. Posted as its own review comment, one comment per finding, on the diff line chosen by *Anchoring a general finding* below. Never collected into the top-level body.
 - **Existing Threads** (from Step 6) — findings already covered by an open inline comment, another reviewer's or our own from an earlier run. Posted as either a 👍 reaction on the original comment (pure agreement, nothing to add) or a short threaded reply inside the original thread (missing context to add). Never goes in the top-level body and never as a new inline comment — that duplicates the conversation.
 
-The top-level review body contains **only** the metadata sections — never inline-eligible findings, and never a "Confirming existing review threads" section or anything like it, on any route. Confirmations belong inside the threads they're confirming. A thread that needs nothing gets nothing: "fixed" is said by resolving the thread, not by a comment.
+The top-level review body contains **only** the metadata sections — never a finding of any bucket, and never a "Confirming existing review threads" section or anything like it, on any route. Confirmations belong inside the threads they're confirming. A thread that needs nothing gets nothing: "fixed" is said by resolving the thread, not by a comment.
 
 #### Top-level review body — exact template
 
@@ -619,53 +622,27 @@ _This code review was made automatically by Krzysztof Trzos Code Review AI Skill
 | 🟡 [Optional] | {n}   | {pattern1, pattern2, ...}                           |
 | 🔵 [Question] | {n}   | {pattern1, pattern2, ...}                           |
 
-*(Omit rows with count 0. Omit the entire Summary section when zero findings posted.)*
+*(Omit rows with count 0. Omit the table when zero findings posted. The Summary heading and Reasons for change stay.)*
 
-## PR Discipline
-{Phase 1 results — Scope and Size verdicts, plus suggested splits if any}
-
-## Positive Observations
-- {good things, from Agent 8}
-
-*(Omit the Positive Observations heading if there are none.)*
-
-## General Findings
-{Only PR-level or out-of-diff findings. Group by [Must] → [Optional] → [Question].
- Omit the General Findings heading if there are none.}
-
-### Required Changes
-- **[Must]** {problem — 1–3 sentences, the first states the finding} <!-- sig: {signature} -->
-  **Suggested fix:** {concrete alternative}
-  **Locations:** {from `consolidated_locations`, only when G1 merged this finding}
-
-  <details>
-  <summary>Why</summary>
-
-  {the full argument, in plain sentences}
-
-  </details>
-
-### Suggestions
-- **[Optional]** {problem — 1–3 sentences, the first states the finding} <!-- sig: {signature} -->
-  **Suggested fix:** {concrete alternative, when there is one}
-
-### Questions
-- **[Question]** {the question, then what is unclear — 1–3 sentences} <!-- sig: {signature} -->
+### Reasons for change
+- {one reason, in one plain sentence, from Agent A's `REASONS_FOR_CHANGE`}
 ```
 
-General Findings are the same findings as the inline ones. They only failed the diff-line check, so they use the same four parts and the same writing rules — including no subject line. Separate consecutive items with a blank line; the bold badge marks where each one starts. The `Why` fold is shown above only under Required Changes because that is where it usually lands, but a Suggestion or a Question carries one on the rare occasion it has evidence to fold. Read `${CLAUDE_PLUGIN_ROOT}/skills/code-review/references/comment-style.md` before writing them, and drop any section that has nothing to put in it.
+**Reasons for change** lists why the PR changes the code, one sentence per item, exactly as Agent A returned them. One item is the healthy case. Several items are how the author sees the PR carries more than one reason. Do not add verdicts, categories, file lists or split plans here: a scope violation is a finding (see below).
 
-**The template above is exhaustive.** The top-level body contains exactly: the auto-generation notice, Summary table, PR Discipline, Positive Observations, and General Findings. Nothing else.
+**The template above is exhaustive.** The top-level body contains exactly: the auto-generation notice and the Summary section (table plus Reasons for change). Nothing else. Findings never go in the body, not even PR-level ones: every finding is its own comment on the code (*Anchoring a general finding*, below).
 
 **Do NOT include in the top-level body** — these are local-preview-only sections from Step 7, and posting them on the PR is noise:
+- PR Discipline (size and the scope verdict; a scope FAIL is posted as a finding)
+- Positive Observations
 - Historical Context
 - DDD Assessment
 - Project Rules Compliance
 - Obstacles Encountered
-- Summary
+- the preview's closing Summary sentence
 - Confirmations of Existing Threads (those go inside the threads themselves, with no exception)
 
-If the General Findings section has more than ~10 entries, wrap the Suggestions and Questions subsections in `<details><summary>…</summary>…</details>` so the comment stays readable.
+**A scope FAIL becomes a finding.** When Agent A returns `SCOPE_PASS: false`, post one `[Must]` general finding whose problem names the extra reasons for change and whose suggested fix is Agent A's `SUGGESTED_SPLITS`. Its signature is `scope:split`. Size is not posted at all.
 
 **Multi-PR group unit:** the second line of the body names the PRs reviewed together — see `multi-pr-grouping.md` § Step 8. The marker line itself never changes.
 
@@ -720,21 +697,32 @@ GitHub's review API rejects the **entire review** if any inline comment points a
    gh api repos/{owner}/{repo}/pulls/{pr}/files --paginate --jq '.[] | {path: .filename, patch}'
    ```
 
-   **The field is `filename`, not `path`.** A bare `{path, patch}` yields `path: null` for every file, every finding then fails the "file not in the PR's files list" test below, and **every inline comment is silently demoted to General Findings** — a working review with the whole point of this step removed, and no error to notice.
+   **The field is `filename`, not `path`.** A bare `{path, patch}` yields `path: null` for every file, every finding then fails the "file not in the PR's files list" test below, and **every inline comment is silently moved to the general bucket and anchored by the fallback rules** — a working review with the whole point of this step removed, and no error to notice.
 2. For each `patch`, parse `@@ -a,b +c,d @@` headers to derive the set of valid RIGHT-side line numbers — every line in the hunk that begins with `+` or ` ` (a space, i.e. a context line), counted from `c` onward.
 
-   **An empty `patch` does not mean an empty diff.** GitHub leaves `patch` out for a file whose diff is too large, and very long lines trigger it at a few hundred changed lines (measured: a 618-line change to one OpenAPI JSON file, `changes: 618`, `patch` missing). Parsed as-is, that file has no valid lines and every finding on it is demoted to General Findings with no error. When `patch` is null or empty but `changes > 0`, build the same set locally from the hunks of `git diff "$merge_base" "{source_ref}" -- <path>`, with `$merge_base` from Step 4e. Check that `{source_ref}` still exists first (Step 2). GitHub accepts a comment on such a line; only the API response omits the text.
+   **An empty `patch` does not mean an empty diff.** GitHub leaves `patch` out for a file whose diff is too large, and very long lines trigger it at a few hundred changed lines (measured: a 618-line change to one OpenAPI JSON file, `changes: 618`, `patch` missing). Parsed as-is, that file has no valid lines and every finding on it is moved to the general bucket with no error. When `patch` is null or empty but `changes > 0`, build the same set locally from the hunks of `git diff "$merge_base" "{source_ref}" -- <path>`, with `$merge_base` from Step 4e. Check that `{source_ref}` still exists first (Step 2). GitHub accepts a comment on such a line; only the API response omits the text.
 3. For each finding with `file:line`:
-   - File not in the PR's files list → demote to **General Findings**.
-   - File present but line not in the valid set → demote to **General Findings** (and prefix the entry with `\`{file}:{line}\` —` so the reader still sees the location).
+   - File not in the PR's files list → move to the **general** bucket.
+   - File present but line not in the valid set → move to the **general** bucket (and prefix the problem with `\`{file}:{line}\` —` so the reader still sees the location).
    - Otherwise → keep as inline comment.
 
-Why pre-validate: a single bad line on the batched review POST kills the whole submission with HTTP 422. Demoting to general findings is preferable to losing the entire post.
+Why pre-validate: a single bad line on the batched review POST kills the whole submission with HTTP 422. A general finding still posts as a comment, on the anchor chosen below.
 
-#### Then validate the other direction — a General Finding must have earned it
+#### Anchoring a general finding
+
+Every general finding is posted as **its own** comment in the same `comments` array, one comment per finding. Never merge two general findings into one comment, and never put one in the top-level body. Pick the anchor in this order:
+
+1. **Same file, nearest line.** The finding points at code in a file that is in the diff, but outside the hunks → the valid RIGHT-side line closest to the original line. Keep the `` `{file}:{line}` — `` prefix.
+2. **Deleted file.** The file has no RIGHT side → its first LEFT-side line, with `side: "LEFT"`.
+3. **Most related file.** The finding is about one changed file, or names a class or method defined in one (a missing test for `Foo` → the file that changes `Foo`) → the first valid RIGHT-side line of that file.
+4. **The very beginning.** Truly PR-level (title, description, scope, a file outside the PR) → the first valid RIGHT-side line of the first file in the PR's `files` order. When that file has no RIGHT side, use the next file that has one.
+
+The comment uses the inline template below. A finding anchored by rule 3 or 4 adds one line under the problem: `_About the whole PR, not this line._` (rule 3: `_About this file, not this line._`). Several general findings may share one anchor line; each is still a separate comment, ordered [Must] → [Optional] → [Question].
+
+#### Then validate the other direction — a general finding must have earned it
 
 The check above only ever demotes. Run it in reverse immediately before the POST: for **every** entry in
-the General Findings bucket, assert that at least one of these holds —
+the general bucket, assert that at least one of these holds —
 
 1. it points at no code in the diff at all (genuinely PR-level: scope, size, a coverage figure, the
    description, a missing test, an absent file, a spec in another repository), or
@@ -753,8 +741,8 @@ three conditions above to *that* file.
 **A consolidated pattern is still an inline finding.** Section B of `consolidation-rules.md` merges the
 same pattern at many locations into one finding — that finding is anchored at the lowest `(file, line)`
 with its `consolidated_locations` rendered as a **Locations** list under the fix. It does **not** become a
-General Finding. "Named parameters are missing at six call sites" and "three AAA markers carry trailing
-prose" are the characteristic shape here: grouping them is right, moving the group into the body is not,
+general finding anchored by the fallback rules. "Named parameters are missing at six call sites" and "three AAA markers carry trailing
+prose" are the characteristic shape here: grouping them is right, moving the group to a fallback anchor is not,
 because the reader then has six locations and no line to read them against.
 
 **The usual cause is a `comments` array you never filled.** If the payload has `comments: []` while the
@@ -768,11 +756,11 @@ Step 8 splits the buckets.
 
 Pick the `event` value based on what's being posted, after the inline/general bucketing in the previous steps:
 
-- **`REQUEST_CHANGES`** — the review contains at least one **[Must]** or **[Question]**, anywhere (inline comments or General Findings). Either category signals the PR isn't ready: a `[Must]` blocks merge, and a `[Question]` means the reviewer needs an answer before they can sign off.
+- **`REQUEST_CHANGES`** — the review contains at least one **[Must]** or **[Question]**, anywhere (inline or general findings). Either category signals the PR isn't ready: a `[Must]` blocks merge, and a `[Question]` means the reviewer needs an answer before they can sign off.
 - **`APPROVE`** — there are zero MUSTs and zero Questions across both buckets. Optionals alone are not blocking, so an otherwise-clean review with only suggestions is an approval.
 - **`COMMENT`** — only used as a manual escape hatch when the user picks `edit` and explicitly asks to leave the review unsigned. Don't pick this automatically.
 
-Compute this **after** validation/demotion, not before, since a MUST that gets demoted to General Findings (because its line isn't in the diff) still counts toward `REQUEST_CHANGES`.
+Compute this **after** validation/demotion, not before, since a MUST that gets moved to the general bucket (because its line isn't in the diff) still counts toward `REQUEST_CHANGES`.
 
 GitHub forbids self-approving your own PR. If the `gh` user is the PR author and you computed `APPROVE`, the POST will return 422; in that case, retry with `event: COMMENT` and tell the user the review was posted unsigned because GitHub blocks self-approval. Post it rather than drafting it — the draft route exists for reviews the reviewer has to weigh, and this one was computed clean; only the signature is missing.
 
@@ -801,7 +789,7 @@ JSON
 - Build the JSON payload safely (write it to a temp file with `Write`, then `gh api ... --input /tmp/review.json`) — embedding markdown bodies in a heredoc inside a Bash call is fragile when the body contains backticks or `$` characters.
 
 If the POST fails:
-- **422 with a comment-position error** — your validation missed a case. Inspect the response, demote the offending finding to General Findings, and retry.
+- **422 with a comment-position error** — your validation missed a case. Inspect the response, move the offending finding to the general bucket, re-anchor it, and retry.
 - **403 / scope error** — the user's `gh` token lacks repo write or `pull_request` scope. Tell them what's missing instead of retrying.
 - **Other** — report the response verbatim and stop. Do **not** silently fall back to a single `gh pr comment` dump; that defeats the purpose of this step.
 
@@ -984,7 +972,7 @@ This mode skips Phases 1 and 2 entirely. It addresses author responses on the sk
 - **Don't nitpick style** if the project has a formatter/linter (ECS, PHP-CS-Fixer).
 - **State review scope** when not reviewing everything: "Checked only Deptrac files."
 - **Surface obstacles, don't hide them.** If a subagent reported a setup issue or workaround, it goes in the "Obstacles Encountered" section so follow-up work doesn't pay the same cost twice.
-- **Inline comments belong on lines.** When posting to GitHub, every finding that points at a real file:line in the diff goes as an inline review comment on that line, not in the top-level body. The top-level body is reserved for the auto-generation notice, PR Discipline, Positive Observations, and genuinely PR-level findings (Step 8). Reviewers should see each finding next to the code it's about, not as a wall of file references.
+- **Inline comments belong on lines.** When posting to GitHub, every finding that points at a real file:line in the diff goes as an inline review comment on that line, not in the top-level body. Genuinely PR-level findings are comments too, each on its own fallback anchor. The top-level body holds only the auto-generation notice and the Summary with Reasons for change (Step 8). Reviewers should see each finding next to the code it's about, not as a wall of file references.
 - **Confirmations belong in the thread they're confirming.** When another reviewer (Copilot, a teammate) or an earlier run of this skill has already raised the same point, react with 👍 on that comment if you have nothing to add, or post a short reply inside the thread if there is missing context. Never re-flag it as a new inline finding, and never collect confirmations under a "Confirming existing review threads" heading in the top-level body — there is no exception, not for drafts and not for harness denials (Step 8).
 - **Never hide a blocking point in an outdated thread.** GitHub folds outdated threads away. A `[Must]` or `[Question]` that follows up on one gets a fresh inline comment on the current line.
 - **Don't argue with your own earlier advice.** If the author changed the code because a prior skill comment asked them to, don't ask them to change it back over a preference. Raise it only when the result is wrong, and then say it corrects our earlier suggestion.

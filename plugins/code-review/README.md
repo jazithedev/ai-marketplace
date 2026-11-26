@@ -63,6 +63,8 @@ For every finding the skill produces:
 
 Each posted finding also carries a hidden `<!-- sig: pattern:identifier -->` marker. GitHub does not render it; the next review run uses it to recognise its own earlier comments and react or reply in those threads instead of posting duplicates.
 
+The review body holds only the Summary: the severity table and **Reasons for change**, one sentence per reason. Every finding is its own comment on the code. A PR-level finding, or one on a line outside the diff, goes on the nearest suitable diff line, or the first changed line of the PR, and says so.
+
 Findings are read against the PR head, fetched into a local ref, so reviews work on **stacked PRs** whose files don't exist on the branch you have checked out.
 
 Reviewer preferences saved in Claude Code's auto-memory are applied as additional rules — but when such a rule justifies itself with a checkable claim about the codebase ("these paths are excluded from coverage", "the team removes these"), the skill verifies that claim first. If the codebase contradicts it, the finding drops to `[Optional]` with the measurement shown, and you're offered a correction to the rule instead of the same false `[Must]` on every future review.

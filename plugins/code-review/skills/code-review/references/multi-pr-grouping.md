@@ -271,7 +271,8 @@ findings. Duplicates across agents are the same observation no matter which PR i
    when later PRs moved code. Take the exact line text and find it in `refs/pr/<owner>:<file>`. If
    there is one match, use it. If there are several, take the one closest to blame's `orig-line`. If
    there is none, or the line falls outside the owner's valid RIGHT-side set (Step 8), the finding
-   becomes that PR's **General Finding**, prefixed with the top-ref location.
+   becomes that PR's **general finding**, prefixed with the top-ref location and posted on a fallback
+   anchor (SKILL.md Step 8).
 4. **Cross-PR finding** (`prs` names two or more members, each with its own entry in
    `locations_by_pr` — see `agent-output-contract.md` § 7): emit **one copy per involved PR**, anchored at that PR's own line. Each body names the counterpart:
    `Related: #13 \`src/Foo/Handler.php:42\``. Classify **per copy**: a PR in `fix_lands_on`, whose code has to

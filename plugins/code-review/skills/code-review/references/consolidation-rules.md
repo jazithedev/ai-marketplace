@@ -236,7 +236,7 @@ _This code review was made automatically by Krzysztof Trzos Code Review AI Skill
 `prior_skill_findings`, produced by `agents/previous-comments.md` in Step 4c. It has two collections:
 
 - `prior_skill_findings.inline` — one entry per inline comment with `{comment_id, thread_id, path, line, signature, signature_kind, classification, resolved, outdated, suggested_fix, author_followed_suggestion}`
-- `prior_skill_findings.general` — one entry per General Finding parsed from the body with `{review_id, signature, signature_kind, classification}`
+- `prior_skill_findings.general` — one entry per General Finding parsed from the body of a review made before v1.10.0, with `{review_id, signature, signature_kind, classification}`
 
 `signature_kind` is `marker` for findings posted since v1.7.0, which carry a hidden `<!-- sig: … -->` marker, and `legacy` for older ones, whose signature is their normalised subject line.
 
@@ -294,11 +294,20 @@ if candidate.bucket == "inline":
         → Keep as fresh inline finding
 
 elif candidate.bucket == "general":
+    # Since v1.10.0 a general finding posts as its own comment on a fallback anchor (SKILL.md
+    # Step 8), so it is found in inline_index too. Bodies from earlier runs still fill general_index.
+    prior_comments = first non-empty of inline_index.get(k, []) for k in keys
     if any(k in general_index for k in keys):
-        # Case 4 — same rule already in the prior review body; re-listing is noise
+        # Case 4 — same rule already in an older review body; re-listing is noise
+        → Drop the candidate entirely
+    elif [m for m in prior_comments if not m.resolved]:
+        # Case 4b — same rule already posted as a comment, thread still open
+        → Move to Existing Threads bucket: stance = "react", comment_id = lowest unresolved comment_id
+    elif prior_comments:
+        # Case 4c — the author resolved it; a PR-level point does not come back on its own
         → Drop the candidate entirely
     else:
-        → Keep as a new General Finding
+        → Keep as a new general finding (posted as its own comment)
 ```
 
 ### Tie-breaking when multiple matches exist
@@ -313,6 +322,7 @@ When `candidate.classification` is **stricter** than the matched prior (e.g., th
 - For Case 2 — same; the reply body should call out the escalation.
 - For Cases 3 and 5 — already fresh, no change.
 - For Case 4 — escalating a General Finding from `[Optional]` to `[Must]` is rare; treat as Case 5 (keep fresh) and let the new posting carry the upgraded severity.
+- For Case 4b — reply with the escalation note instead of reacting, as in Case 1.
 
 ### Cross-file reply body template
 
@@ -334,6 +344,7 @@ No auto-generation notice on the reply (per SKILL.md — the notice lives only o
 | 2 | Inline, unresolved, `FakeXTest.php:23`, sig `add aaa comments...` | Inline, `EntityXTest.php:23`, same sig | Reply rollup on the prior |
 | 3 | Inline, **resolved**, `FakeXTest.php:23`, sig `add aaa comments...` | Inline, `EntityXTest.php:23`, same sig | Fresh inline on `EntityXTest.php` |
 | 4 | General Finding in prior body, sig `pr description mismatch` | General Finding, same sig | Drop entirely |
+| 4b | Comment on a fallback anchor, unresolved, sig `pr description mismatch` | General finding, same sig | 👍 react on the prior |
 | 5 | No prior with this sig | Anything | Fresh, normal posting |
 | outdated | Inline, unresolved, **outdated**, `spec.json:2748`, sig `stale-description:…` | `[Question]` on `spec.json:2748`, same sig | Fresh inline on the current line, first sentence links the old thread |
 | own advice | Inline, `author_followed_suggestion: true`, sig `undocumented-error-contract:starrating` | `[Optional]` asking to remove what the author added | Drop — nothing in it is wrong |

@@ -3,10 +3,11 @@
 How to write the body of a review comment. Read this in Step 7 (building the preview) and Step 8
 (posting), before you write a single comment body.
 
-Everything here applies to **inline comments** and to entries under **General Findings** in the
-review body — those are the same findings, they only failed the diff-line check. It does not apply
-to the Summary table, PR Discipline or Positive Observations, which are not findings; those still
-follow the plain-English rules in Section 3.
+Everything here applies to **inline comments**, and to **general findings**, which post as their own
+comments on a fallback anchor (SKILL.md Step 8, *Anchoring a general finding*) — those are the same
+findings, they only failed the diff-line check. It does not apply to the Summary table or Reasons for
+change in the review body, which are not findings; those still follow the plain-English rules in
+Section 3.
 
 ---
 
@@ -68,9 +69,9 @@ In practice:
 | Why | often | sometimes | seldom |
 | Signature marker | always | always | always |
 
-A General Finding is the one exception: its badge has no emoji, and its signature marker ends its
-first line: `- **[Must]** {problem} <!-- sig: {signature} -->`. The bold badge marks where each
-item starts, and a blank line separates consecutive items.
+A general finding uses the same skeleton, emoji badge included. When it sits on a fallback anchor,
+one line under the problem says so: `_About the whole PR, not this line._` (or `_About this file,
+not this line._`). One comment holds one finding, never more.
 
 ### Problem — one to three sentences
 
@@ -310,7 +311,7 @@ For each comment:
 - [ ] `<summary>Why</summary>`, with blank lines inside the `<details>`.
 - [ ] Section 3 run down: no metaphors, no stacked clauses, identifiers verbatim.
 - [ ] No `Certainty` footer and no `[{certainty}%]` prefix.
-- [ ] `<!-- sig: … -->` present as the last line (a General Finding: at the end of its first line).
+- [ ] `<!-- sig: … -->` present as the last line.
 
 If a comment still feels long after this, the usual cause is that it is two findings wearing one
 badge. Split it.
