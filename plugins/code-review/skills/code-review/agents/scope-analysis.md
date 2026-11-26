@@ -32,12 +32,12 @@ recompute it.
    file moves) and therefore earns the exception in `pr-discipline.md`, and whether the PR
    description says so. A uniform 700-line deletion of superseded code is not an oversized PR; a
    700-line feature is. Set `SIZE_EXCEPTION` accordingly and say which kind of uniformity applies.
-10. **Description-vs-diff cross-check (S1):** extract from the description (a) filenames matching `[A-Z][A-Za-z0-9_]+\.(php|ts|tsx|js|py|go|java|rb)`, (b) class names in PascalCase (with or without `::class`), (c) specific behaviour claims ("now does X", "renamed Y to Z"). For each extracted token, verify it appears in the diff (file paths and content). Emit a `description-vs-diff-mismatch` finding for any token that's in the description but absent in the diff. Common cause: author renamed a file/class within the PR but didn't update the description. Classification: `OPTIONAL`, anchor it as a PR-level General Finding (no file:line).
+10. **Description-vs-diff cross-check (S1):** extract from the description (a) filenames matching `[A-Z][A-Za-z0-9_]+\.(php|ts|tsx|js|py|go|java|rb)`, (b) class names in PascalCase (with or without `::class`), (c) specific behaviour claims ("now does X", "renamed Y to Z"). For each extracted token, verify it appears in the diff (file paths and content). Emit a `description-vs-diff-mismatch` finding for any token that's in the description but absent in the diff. Common cause: author renamed a file/class within the PR but didn't update the description. Classification: `OPTIONAL`, report it as a PR-level general finding (no file:line); the orchestrator anchors it.
 
 ## Group units
 
 When you receive `{work_dir}/unit.md`, several PRs that share one ticket are under review together.
-Judge **each member separately**. Give each member its own CATEGORY, SCOPE_PASS, SIZE_EXCEPTION,
+Judge **each member separately**. Give each member its own REASONS_FOR_CHANGE, CATEGORY, SCOPE_PASS, SIZE_EXCEPTION,
 VIOLATIONS, SUGGESTED_SPLITS and DESCRIPTION_MISMATCHES block, headed `### PR #N`, against its own
 entry in `{size_verdicts}`.
 
@@ -55,6 +55,7 @@ Gap PRs (marked context only in `unit.md`) get no verdict.
 ## Output Format
 
 Return a structured assessment:
+- REASONS_FOR_CHANGE: why this PR changes the code, one plain sentence per reason (under 20 words, no file lists, no verdicts). One item when the PR is focused. The orchestrator posts this list as is in the review Summary.
 - CATEGORY: (single category or "MIXED: cat1 + cat2")
 - SCOPE_PASS: true/false
 - SIZE_EXCEPTION: true/false/n-a (`n-a` unless `{size_verdict}` is `MUST_SPLIT`), with the reason

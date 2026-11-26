@@ -32,8 +32,8 @@ migration), report it as a PR-level finding with no `file:line` rather than inve
 
 **One agent is exempt:** `previous-comments.md`, whose job is finding prior review feedback the author
 did *not* act on — there the unchanged line is precisely the point. Those findings carry
-`bucket: "general"` so the orchestrator posts them in the review body instead of attempting an inline
-comment GitHub would reject. If your own agent file states an exemption, follow your agent file.
+`bucket: "general"` so the orchestrator posts each one as its own comment on the nearest valid diff
+line (SKILL.md Step 8, *Anchoring a general finding*) instead of an inline comment GitHub would reject. If your own agent file states an exemption, follow your agent file.
 
 ## 2. Read the full files, not only the hunks
 

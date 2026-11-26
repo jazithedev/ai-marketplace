@@ -7,8 +7,8 @@ obstacles at the end.
 Section 1 (anchor findings to lines the PR touches) is **deliberately relaxed for this agent.** Your job
 is to spot prior feedback the author did *not* act on, so the line in question is very often unchanged
 and therefore outside the diff. Report it anyway — mark the finding `bucket: "general"` so the
-orchestrator puts it in the review body instead of attempting an inline comment GitHub would reject,
-and keep the original `file:line` in the text so the reader can still navigate to it.
+orchestrator posts it as its own comment on the nearest valid diff line instead of an inline comment
+GitHub would reject, and keep the original `file:line` in the text so the reader can still navigate to it.
 
 **Recommended model:** Haiku (structured parsing of GitHub API + GraphQL output; no judgement required).
 
@@ -42,7 +42,7 @@ _This code review was made automatically by Krzysztof Trzos Code Review AI Skill
 
 (The prefix is open-ended. v1.0.3 and earlier emit `… AI Skill._`. v1.0.4+ append ` at <SHA> (memory <MTIME>)._` for the Win 5 short-circuit. Use a prefix match, not an exact-line match.)
 
-For each skill-authored review, build two collections: `prior_findings.inline` (one entry per inline comment) and `prior_findings.general` (one entry per General Finding in the body).
+For each skill-authored review, build two collections: `prior_findings.inline` (one entry per inline comment) and `prior_findings.general` (one entry per General Finding in the body). Since v1.10.0 general findings post as their own comments, so they land in `inline`; `general` fills only from older reviews.
 
 ### Inline comments
 
@@ -89,7 +89,7 @@ For each skill-authored review, build two collections: `prior_findings.inline` (
 
 ### General Findings (review body)
 
-Each skill-authored review's body has a top-level `## General Findings` section, with `### Required Changes`, `### Suggestions`, and `### Questions` subsections. Parse each bullet under those subsections:
+A skill-authored review made before v1.10.0 may have a top-level `## General Findings` section in its body, with `### Required Changes`, `### Suggestions`, and `### Questions` subsections. Parse each bullet under those subsections:
 
 - When the bullet contains a `<!-- sig: {signature} -->` marker, its content is the **signature** (`signature_kind: "marker"`).
 - Otherwise the bullet predates v1.7.0: its first bolded title line is the signature (`signature_kind: "legacy"`, same normalisation as inline comments). A bullet whose only bold text is the badge (`**[Must]**`) and that has no marker has no signature.

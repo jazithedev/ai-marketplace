@@ -24,7 +24,7 @@ git diff "$prior_sha" "{source_ref}" > "{work_dir}/delta.diff"
 
 If the commit can't be fetched (a force-push removed it from the remote), write no `delta.diff`. Run the review on the full diff with the same brief, and add an Obstacles entry saying the delta could not be built.
 
-Size stays a property of the whole PR. `{size_verdict}` still comes from Step 1. When it has not changed since the prior review, PR Discipline says so in one line rather than repeating the split.
+Size stays a property of the whole PR. `{size_verdict}` still comes from Step 1. When it has not changed since the prior review, the preview's PR Discipline says so in one line rather than repeating the split. Size is never posted.
 
 ## 2. Write `{prior_review_brief}`
 
